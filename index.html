@@ -521,7 +521,7 @@ var LS = (function(){
 // ================================================================
 // Data
 // ================================================================
-var GAS_URL = LS.get('sk_gas','');
+var GAS_URL = LS.get('sk_gas','https://script.google.com/macros/s/AKfycbwG8kFAf2fsmoYAmqGnxOsBEmjHbPr7b9fRiT-CU7d7X3Z4R-h0DGA9aCoG1cNLURBZNQ/exec');
 var CACHE_KEY = 'sk_cache';
 var CACHE_TTL = 30*1000;
 
@@ -551,36 +551,7 @@ var TRAINING_TEXTS = {
   7: '【目的】\n学んだことを「できる」に変える総仕上げ確認テスト（実戦編）。\n知識を現場での「行動」に結びつけるための最終確認。\n迷ったときは、お客様の視点に立って考えてみましょう！\n\n【合格基準】15問中13問以上正解\n\n【第1部：○×クイズ（全10問）】\nQ1  挨拶は単なる礼儀である\n　→ × 挨拶は信頼関係を築く「戦略的行動」。SKグループ最大の差別化戦略。\n\nQ2  挨拶は信頼関係を築く行動である\n　→ ○ 笑顔・視線・声色・語先後礼・立ち止まりの5つが信頼をつくる。\n\nQ3  挨拶では言葉より先にお辞儀をする\n　→ × 正しくは「語先後礼」。言葉を先に言ってからお辞儀する。\n\nQ4  身だしなみは自分のために行うものである\n　→ × お客様に安心感を与えるため。基準は「信頼感・安心感」。\n\nQ5  身だしなみはお客様に安心感を与えるために行う\n　→ ○ 身だしなみの目的はお客様への安心感と信頼感の提供。\n\nQ6  清掃は決められた担当者だけが行えばよい\n　→ × 「気づいた人が、すぐやる」が絶対基準。全員が主体的に動く。\n\nQ7  ゴミに気づいたら拾うのが基本である\n　→ ○ 「来た時よりもきれいにして帰る」がSKグループの創業精神。\n\nQ8  クレドは覚えることが目的である\n　→ × 「持つだけ・覚えるだけ」では意味がない。現場で判断基準として使うことが目的。\n\nQ9  クレドは行動の判断基準である\n　→ ○ 現場で迷ったとき、立ち返る「確実な場所」がクレド。\n\nQ10 理念は日々の仕事と関係がある\n　→ ○ 理念は「きれいごと」ではない。理念は「行動」でしか表現できない。\n\n【第2部：理念・方針の穴埋め（全5問）】\nQ1  リサイクル事業を通じ、住み良い（　　）づくりを目指し、資源循環型社会の持続的発展に貢献します\n　→ 環境\n\nQ2  人との（　　）を大切にし、社会に信頼される企業であること\n　→ 出会い\n\nQ3  社員が能力と（　　）を発揮し、お客様に感動していただける企業であること\n　→ 個性\n\nQ4  社員とともに（　　）し、「しあわせ、ゆとり、豊かさ」を味わえる企業であること\n　→ 成長\n\nQ5  すべての行動の基本となるのが（　　）である\n　→ クレドカード（行動指針）\n\n【第3部：行動宣言】\n10の指針の中から1つ選び、明日現場で「絶対に実践すること」を1つ決め、宣言する\n記入例：「私は明日から、トイレのスリッパが乱れていたら必ず一番に揃えます！」\n\n【所要時間】約30分'
 };
 
-var DEMO = {
-  trainees:[
-    {id:1,name:'佐藤 健一',joinDate:'2025-04-01',dept:'ユニット2',type:'中途',note:''},
-    {id:2,name:'鈴木 花子',joinDate:'2025-04-01',dept:'ユニット3',type:'中途',note:''},
-    {id:3,name:'田中 雄介',joinDate:'2025-04-15',dept:'ユニット2',type:'中途',note:''},
-    {id:4,name:'伊藤 美咲',joinDate:'2025-05-01',dept:'ユニット3',type:'中途',note:''},
-    {id:5,name:'渡辺 大輔',joinDate:'2025-05-01',dept:'ユニット2',type:'中途',note:''}
-  ],
-  records:[
-    {tid:1,rid:1,st:'done',dt:'2025-04-03'},{tid:1,rid:2,st:'done',dt:'2025-04-05'},
-    {tid:1,rid:3,st:'done',dt:'2025-04-10'},{tid:1,rid:4,st:'done',dt:'2025-04-17'},
-    {tid:1,rid:5,st:'progress',dt:''},{tid:1,rid:6,st:'pending',dt:''},{tid:1,rid:7,st:'pending',dt:''},
-    {tid:2,rid:1,st:'done',dt:'2025-04-03'},{tid:2,rid:2,st:'done',dt:'2025-04-05'},
-    {tid:2,rid:3,st:'done',dt:'2025-04-10'},{tid:2,rid:4,st:'done',dt:'2025-04-17'},
-    {tid:2,rid:5,st:'done',dt:'2025-05-01'},{tid:2,rid:6,st:'done',dt:'2025-05-10'},{tid:2,rid:7,st:'done',dt:'2025-05-20'},
-    {tid:3,rid:1,st:'done',dt:'2025-04-17'},{tid:3,rid:2,st:'done',dt:'2025-04-20'},
-    {tid:3,rid:3,st:'pending',dt:''},{tid:3,rid:4,st:'pending',dt:''},{tid:3,rid:5,st:'pending',dt:''},{tid:3,rid:6,st:'pending',dt:''},{tid:3,rid:7,st:'pending',dt:''},
-    {tid:4,rid:1,st:'done',dt:'2025-05-03'},{tid:4,rid:2,st:'done',dt:'2025-05-05'},
-    {tid:4,rid:3,st:'done',dt:'2025-05-10'},{tid:4,rid:4,st:'progress',dt:''},{tid:4,rid:5,st:'pending',dt:''},{tid:4,rid:6,st:'pending',dt:''},{tid:4,rid:7,st:'pending',dt:''},
-    {tid:5,rid:1,st:'done',dt:'2025-05-03'},{tid:5,rid:2,st:'progress',dt:''},
-    {tid:5,rid:3,st:'pending',dt:''},{tid:5,rid:4,st:'pending',dt:''},{tid:5,rid:5,st:'pending',dt:''},{tid:5,rid:6,st:'pending',dt:''},{tid:5,rid:7,st:'pending',dt:''}
-  ],
-  schedules:[
-    {id:1,rid:1,date:'2025-06-10',lec:'田中 マネージャー',loc:'研修室A',att:5},
-    {id:2,rid:2,date:'2025-06-12',lec:'田中 マネージャー',loc:'研修室A',att:5},
-    {id:3,rid:3,date:'2025-06-17',lec:'佐々木 係長',loc:'研修室B',att:4},
-    {id:4,rid:5,date:'2025-07-01',lec:'田中 マネージャー',loc:'研修室A',att:6},
-    {id:5,rid:7,date:'2025-07-15',lec:'田中 マネージャー',loc:'研修室A',att:3}
-  ]
-};
+var DEMO = {trainees:[], records:[], schedules:[]};
 
 var S = {
   trainees:[], records:[], schedules:[],
