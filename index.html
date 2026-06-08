@@ -521,7 +521,7 @@ var LS = (function(){
 // ================================================================
 // Data
 // ================================================================
-var GAS_URL = LS.get('sk_gas','https://script.google.com/macros/s/AKfycbwyHAjBeJvL0f6I8BWMcTYq0s1IF5ZBB-NQA6P83J4jWqhyJ0vLDHZcDnvNgqsgTRWSjQ/exec');
+var GAS_URL = LS.get('sk_gas','https://script.google.com/macros/s/AKfycbxGsXgKtytYeMhixMqC_bNNPesnUeSgiSD9_yI36Xby1NxRIUtoKCe691SN1LmuDPW7Wg/exec');
 var CACHE_KEY = 'sk_cache';
 var CACHE_TTL = 5*60*1000;
 
@@ -715,18 +715,63 @@ function applyData(data){
   S.trainees  = data.trainees  || [];
   S.records   = (data.records||[]).map(function(r){ return {tid:r.traineeId||r.tid, rid:r.trainingId||r.rid, st:r.status||r.st, dt:r.doneDate||r.dt||''}; });
   S.schedules = (data.schedules||[]).map(function(s){ return {id:s.id, rid:s.trainingId||s.rid, date:s.date, lec:s.lecturer||s.lec||'', loc:s.location||s.loc||'', att:s.attendees||s.att||0}; });
-  // GASから面談記録を取得してS.iRecsに反映
+  // 面談記録
   if(data.interviews && data.interviews.length){
     S.iRecs = {};
     data.interviews.forEach(function(iv){
       var tid = iv.traineeId || iv.tid;
       if(!S.iRecs[tid]) S.iRecs[tid] = [];
-      S.iRecs[tid].push({
-        id: iv.id, date: iv.date||'', content: iv.content||'',
-        next: iv.next||'', itvwName: iv.itvwName||''
-      });
+      S.iRecs[tid].push({id:iv.id, date:iv.date||'', content:iv.content||'', next:iv.next||'', itvwName:iv.itvwName||''});
     });
     LS.set('sk_irec', JSON.stringify(S.iRecs));
+  }
+  // 面談者マスタ（GAS優先、なければlocalStorage）
+  if(data.interviewers && data.interviewers.length){
+    S.interviewers = data.interviewers.map(function(iv){
+      return {id:Number(iv.id), name:iv.name||'', role:iv.role||'', note:iv.note||''};
+    });
+    LS.set('sk_itvw', JSON.stringify(S.interviewers));
+  }
+  // 担当設定
+  if(data.assignments && data.assignments.length){
+    data.assignments.forEach(function(a){
+      var tr = null;
+      for(var i=0;i<S.trainees.length;i++){
+        if(S.trainees[i].id == a.traineeId){ tr = S.trainees[i]; break; }
+      }
+      if(tr && a.interviewerId) tr.itvwId = Number(a.interviewerId);
+    });
+    var asgnMap = {};
+    S.trainees.forEach(function(t){ if(t.itvwId) asgnMap[t.id] = t.itvwId; });
+    LS.set('sk_asgn', JSON.stringify(asgnMap));
+  }
+  // 研修マスタ設定をGASから反映（テキスト・期限・資料URL・YouTube）
+  if(data.trainings && data.trainings.length){
+    data.trainings.forEach(function(gt){
+      for(var i=0;i<TRAININGS.length;i++){
+        if(TRAININGS[i].id == gt.id){
+          if(gt.deadline)    TRAININGS[i].deadline    = Number(gt.deadline);
+          if(gt.materialUrl) TRAININGS[i].materialUrl = gt.materialUrl;
+          if(gt.text)        TRAINING_TEXTS[TRAININGS[i].id] = gt.text;
+          break;
+        }
+      }
+    });
+    // localStorageにも反映
+    var deadMap={}, matMap={}, txtMap={};
+    TRAININGS.forEach(function(t){
+      deadMap[t.id]=t.deadline;
+      if(t.materialUrl) matMap[t.id]=t.materialUrl;
+    });
+    for(var k in TRAINING_TEXTS){ if(TRAINING_TEXTS[k]) txtMap[k]=TRAINING_TEXTS[k]; }
+    LS.set('sk_deads', JSON.stringify(deadMap));
+    LS.set('sk_mats',  JSON.stringify(matMap));
+    LS.set('sk_txts',  JSON.stringify(txtMap));
+  }
+  // YouTube URL
+  if(data.youtubeUrl !== undefined && data.youtubeUrl !== ''){
+    S.ytUrl = data.youtubeUrl;
+    LS.set('sk_yt', data.youtubeUrl);
   }
   loadExtras();
   renderAll();
@@ -1123,10 +1168,12 @@ function saveYt(){
   var url=g('yt-url')?g('yt-url').value.trim():'';
   S.ytUrl=url; LS.set('sk_yt',url);
   closeM('m-yt'); ytOpen=false; renderMaster(); toast('動画URLを保存しました');
+  if(GAS_URL) apiPost({action:'updateYoutubeUrl', url:url});
 }
 function deleteYt(){
   S.ytUrl=''; LS.set('sk_yt','');
   closeM('m-yt'); ytOpen=false; renderMaster(); toast('URLを削除しました');
+  if(GAS_URL) apiPost({action:'updateYoutubeUrl', url:''});
 }
 
 function toDrivePrev(url){
@@ -1166,13 +1213,15 @@ function toggleContent(id){
 function saveContentText(id){
   var ta=g('tctxt-'+id);
   if(!ta) return;
-  TRAINING_TEXTS[id]=ta.value;
+  var txt = ta.value;
+  TRAINING_TEXTS[id] = txt;
   try{
     var stored=JSON.parse(LS.get('sk_txts','{}'));
-    stored[id]=ta.value;
+    stored[id]=txt;
     LS.set('sk_txts',JSON.stringify(stored));
   }catch(e){}
   toast('研修内容を保存しました');
+  if(GAS_URL) apiPost({action:'updateTrainingText', trainingId:id, text:txt});
 }
 
 var curDeadId=null;
@@ -1199,6 +1248,7 @@ function saveDeadline(){
   renderDash();
   renderTrainees();
   toast('期限を入社後'+val+'日以内に変更しました');
+  if(GAS_URL) apiPost({action:'updateTrainingDeadline', trainingId:curDeadId, deadline:val});
 }
 
 var curMatId=null;
@@ -1285,6 +1335,21 @@ function saveItvw(){
   }
   saveItvws(); closeM('m-itvw'); renderItvw();
   toast(editId?'更新しました':name+' を追加しました');
+  // GASに保存
+  if(GAS_URL){
+    if(editId){
+      apiPost({action:'updateInterviewer', id:editId, name:name, role:role, note:note});
+    } else {
+      var justAdded = S.interviewers[S.interviewers.length-1];
+      apiPost({action:'addInterviewer', name:name, role:role, note:note})
+        .then(function(res){
+          if(res && res.success && res.id && justAdded){
+            justAdded.id = res.id;
+            saveItvws();
+          }
+        });
+    }
+  }
 }
 function deleteItvw(){
   var editId=parseInt(g('itvw-id')?g('itvw-id').value:'');
@@ -1292,12 +1357,14 @@ function deleteItvw(){
   S.interviewers=S.interviewers.filter(function(x){ return x.id!==editId; });
   for(var i=0;i<S.trainees.length;i++){ if(S.trainees[i].itvwId===editId) delete S.trainees[i].itvwId; }
   saveItvws(); saveAsgn(); closeM('m-itvw'); renderItvw(); toast('削除しました');
+  if(GAS_URL) apiPost({action:'deleteInterviewer', id:editId});
 }
 function assignItvw(tid, val){
   for(var i=0;i<S.trainees.length;i++){
     if(S.trainees[i].id==tid){ S.trainees[i].itvwId=val?parseInt(val):undefined; break; }
   }
   saveAsgn(); renderItvw(); toast('担当面談者を設定しました');
+  if(GAS_URL) apiPost({action:'setAssignment', traineeId:tid, interviewerId:val?parseInt(val):null});
 }
 
 // ================================================================
