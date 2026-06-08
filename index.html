@@ -696,6 +696,19 @@ function applyData(data){
   S.trainees  = data.trainees  || [];
   S.records   = (data.records||[]).map(function(r){ return {tid:r.traineeId||r.tid, rid:r.trainingId||r.rid, st:r.status||r.st, dt:r.doneDate||r.dt||''}; });
   S.schedules = (data.schedules||[]).map(function(s){ return {id:s.id, rid:s.trainingId||s.rid, date:s.date, lec:s.lecturer||s.lec||'', loc:s.location||s.loc||'', att:s.attendees||s.att||0}; });
+  // GASから面談記録を取得してS.iRecsに反映
+  if(data.interviews && data.interviews.length){
+    S.iRecs = {};
+    data.interviews.forEach(function(iv){
+      var tid = iv.traineeId || iv.tid;
+      if(!S.iRecs[tid]) S.iRecs[tid] = [];
+      S.iRecs[tid].push({
+        id: iv.id, date: iv.date||'', content: iv.content||'',
+        next: iv.next||'', itvwName: iv.itvwName||''
+      });
+    });
+    LS.set('sk_irec', JSON.stringify(S.iRecs));
+  }
   loadExtras();
   renderAll();
 }
@@ -1385,6 +1398,19 @@ function submitIRec(tid){
   openDetail(tid);
   switchDetailTab(tid,2);
   toast('面談記録を保存しました');
+  // GASに保存
+  if(GAS_URL){
+    var itvwName='';
+    for(var i=0;i<S.trainees.length;i++){
+      if(S.trainees[i].id==tid && S.trainees[i].itvwId){
+        for(var j=0;j<S.interviewers.length;j++){
+          if(S.interviewers[j].id==S.trainees[i].itvwId){ itvwName=S.interviewers[j].name; break; }
+        }
+        break;
+      }
+    }
+    apiPost({action:'addInterview', traineeId:tid, date:date, content:content, next:next, itvwName:itvwName});
+  }
 }
 
 function deleteIRec(tid, recId){
@@ -1407,7 +1433,7 @@ function toggleSt(tid, rid){
   if(!found) S.records.push({tid:tid,rid:rid,st:nst,dt:nst==='done'?new Date().toISOString().slice(0,10):''});
   openDetail(tid);
   renderDash(); renderTrainees(); renderMaster();
-  if(GAS_URL) apiPost({action:'updateRecord',traineeId:tid,trainingId:rid,status:nst,doneDate:nst==='done'?new Date().toISOString().slice(0,10):''}).then(function(r){ if(r&&r.success) toast('保存しました'); });
+  if(GAS_URL) apiPost({action:'updateRecord',traineeId:tid,trainingId:rid,status:nst,doneDate:nst==='done'?new Date().toISOString().slice(0,10):''}).then(function(r){ if(r&&r.success){ loadData(true); } });
 }
 
 function saveNote(id, note){
@@ -1420,7 +1446,7 @@ function delTrainee(id){
   S.trainees=S.trainees.filter(function(t){ return t.id!=id; });
   S.records=S.records.filter(function(r){ return r.tid!=id; });
   closeM('m-detail'); renderAll();
-  if(GAS_URL) apiPost({action:'deleteTrainee',id:id}).then(function(r){ if(r&&r.success) toast('削除しました'); });
+  if(GAS_URL) apiPost({action:'deleteTrainee',id:id}).then(function(r){ if(r&&r.success){ loadData(true); toast('削除しました'); } });
 }
 
 // ================================================================
@@ -1442,7 +1468,21 @@ function saveTrainee(){
   S.trainees.push({id:nid,name:name,joinDate:joinDate,dept:dept,type:type,note:note});
   for(var i=0;i<TRAININGS.length;i++) S.records.push({tid:nid,rid:TRAININGS[i].id,st:'pending',dt:''});
   closeM('m-trainee'); renderAll(); toast(name+' を追加しました');
-  if(GAS_URL) apiPost({action:'addTrainee',name:name,joinDate:joinDate,dept:dept,type:type,note:note});
+  if(GAS_URL){
+    apiPost({action:'addTrainee',name:name,joinDate:joinDate,dept:dept,type:type,note:note})
+      .then(function(res){
+        if(res && res.success){
+          // GASが返したIDで更新してから最新データを取得
+          if(res.id) {
+            var tr=S.trainees.filter(function(t){ return t.id===nid; })[0];
+            if(tr) tr.id=res.id;
+          }
+          loadData(true); // GAS保存後に最新データを取得
+        } else {
+          toast('GAS保存エラー。再度お試しください', true);
+        }
+      });
+  }
 }
 
 function openAddSchedule(){
