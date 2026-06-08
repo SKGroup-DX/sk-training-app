@@ -679,7 +679,9 @@ function deleteInterviewRecord(tid, recId){
 // ================================================================
 function apiGet(){
   if(!GAS_URL) return Promise.reject(new Error('NO_GAS'));
-  return fetch(GAS_URL+'?action=getData',{redirect:'follow'}).then(function(r){ return r.json(); });
+  return fetch(GAS_URL+'?action=getData&t='+Date.now(),{
+    method:'GET', redirect:'follow', cache:'no-cache'
+  }).then(function(r){ return r.json(); });
 }
 // 書き込み後の冷却期間中はポーリングをスキップ（ms）
 var _lastWrite = 0;
@@ -689,7 +691,13 @@ function apiPost(body){
   if(!GAS_URL) return Promise.resolve(null);
   _lastWrite = Date.now();
   setSync('loading');
-  return fetch(GAS_URL,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json'},redirect:'follow'})
+  // Content-Typeを設定しないことでCORSプリフライトを回避
+  var encoded = 'data=' + encodeURIComponent(JSON.stringify(body));
+  return fetch(GAS_URL, {
+    method: 'POST',
+    body: encoded,
+    redirect: 'follow'
+  })
     .then(function(r){ return r.json(); })
     .catch(function(err){ console.error('apiPost error:', err); return null; })
     .then(function(result){
