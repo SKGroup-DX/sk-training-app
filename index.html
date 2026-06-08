@@ -523,7 +523,7 @@ var LS = (function(){
 // ================================================================
 var GAS_URL = LS.get('sk_gas','https://script.google.com/macros/s/AKfycbwG8kFAf2fsmoYAmqGnxOsBEmjHbPr7b9fRiT-CU7d7X3Z4R-h0DGA9aCoG1cNLURBZNQ/exec');
 var CACHE_KEY = 'sk_cache';
-var CACHE_TTL = 30*1000;
+var CACHE_TTL = 5*60*1000;
 
 var TRAININGS = [
   {id:1,name:'導入編',sub:'The Purpose Workshop',deadline:14,materialUrl:''},
@@ -681,10 +681,21 @@ function apiGet(){
   if(!GAS_URL) return Promise.reject(new Error('NO_GAS'));
   return fetch(GAS_URL+'?action=getData',{redirect:'follow'}).then(function(r){ return r.json(); });
 }
+// 書き込み中はポーリングをブロック
+var _writing = 0;
+
 function apiPost(body){
   if(!GAS_URL) return Promise.resolve(null);
+  _writing++;
+  setSync('loading');
   return fetch(GAS_URL,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json'},redirect:'follow'})
-    .then(function(r){ return r.json(); }).catch(function(){ return null; });
+    .then(function(r){ return r.json(); })
+    .catch(function(err){ console.error('apiPost error:', err); return null; })
+    .then(function(result){
+      _writing = Math.max(0, _writing - 1);
+      if(_writing === 0) setSync('ok');
+      return result;
+    });
 }
 
 function setGasUrl(url){
@@ -716,8 +727,11 @@ function applyData(data){
 function loadData(force){
   setSync('loading');
   var cached=LS.get(CACHE_KEY,null);
-  if(!force&&cached){
-    try{ var c=JSON.parse(cached); if(Date.now()-c.ts<CACHE_TTL){ applyData(c.data); setSync('ok'); return; } }catch(e){}
+  if(!force&&cached&&cached!==''){
+    try{
+      var c=JSON.parse(cached);
+      if(c && c.data && Date.now()-c.ts<CACHE_TTL){ applyData(c.data); setSync('ok'); return; }
+    }catch(e){}
   }
   apiGet().then(function(data){
     LS.set(CACHE_KEY,JSON.stringify({ts:Date.now(),data:data}));
@@ -1433,7 +1447,27 @@ function toggleSt(tid, rid){
   if(!found) S.records.push({tid:tid,rid:rid,st:nst,dt:nst==='done'?new Date().toISOString().slice(0,10):''});
   openDetail(tid);
   renderDash(); renderTrainees(); renderMaster();
-  if(GAS_URL) apiPost({action:'updateRecord',traineeId:tid,trainingId:rid,status:nst,doneDate:nst==='done'?new Date().toISOString().slice(0,10):''}).then(function(r){ if(r&&r.success){ loadData(true); } });
+  if(GAS_URL){
+    apiPost({action:'updateRecord',traineeId:tid,trainingId:rid,status:nst,doneDate:nst==='done'?new Date().toISOString().slice(0,10):''})
+      .then(function(r){
+        if(r && r.success){
+          toast('保存しました');
+          LS.set(CACHE_KEY,''); // キャッシュ無効化
+        } else {
+          // ロールバック
+          var rb=getRecordStatus? getRecSt(tid,rid) : nst;
+          for(var ri=0;ri<S.records.length;ri++){
+            if(S.records[ri].tid==tid && S.records[ri].rid==rid){
+              S.records[ri].st = cur; // 元に戻す
+              S.records[ri].dt = '';
+              break;
+            }
+          }
+          renderDash(); renderTrainees();
+          toast('保存に失敗しました。再度お試しください', true);
+        }
+      });
+  }
 }
 
 function saveNote(id, note){
@@ -1464,25 +1498,35 @@ function saveTrainee(){
   var dept=(g('f-dept')?g('f-dept').value.trim():'')||'ユニット2';
   var type=g('f-type')?g('f-type').value:'中途';
   var note=g('f-note')?g('f-note').value.trim():'';
-  var nid=S.trainees.length?Math.max.apply(null,S.trainees.map(function(t){ return t.id; }))+1:1;
-  S.trainees.push({id:nid,name:name,joinDate:joinDate,dept:dept,type:type,note:note});
-  for(var i=0;i<TRAININGS.length;i++) S.records.push({tid:nid,rid:TRAININGS[i].id,st:'pending',dt:''});
-  closeM('m-trainee'); renderAll(); toast(name+' を追加しました');
-  if(GAS_URL){
-    apiPost({action:'addTrainee',name:name,joinDate:joinDate,dept:dept,type:type,note:note})
-      .then(function(res){
-        if(res && res.success){
-          // GASが返したIDで更新してから最新データを取得
-          if(res.id) {
-            var tr=S.trainees.filter(function(t){ return t.id===nid; })[0];
-            if(tr) tr.id=res.id;
-          }
-          loadData(true); // GAS保存後に最新データを取得
-        } else {
-          toast('GAS保存エラー。再度お試しください', true);
-        }
-      });
+
+  closeM('m-trainee');
+
+  if(!GAS_URL){
+    // GASなしのときはローカルのみ
+    var nid2=S.trainees.length?Math.max.apply(null,S.trainees.map(function(t){ return t.id; }))+1:1;
+    S.trainees.push({id:nid2,name:name,joinDate:joinDate,dept:dept,type:type,note:note});
+    for(var i=0;i<TRAININGS.length;i++) S.records.push({tid:nid2,rid:TRAININGS[i].id,st:'pending',dt:''});
+    renderAll(); toast(name+' を追加しました（ローカルのみ）');
+    return;
   }
+
+  // GASに先に保存してからローカルに反映
+  toast('保存中...', false);
+  apiPost({action:'addTrainee',name:name,joinDate:joinDate,dept:dept,type:type,note:note})
+    .then(function(res){
+      if(res && res.success && res.id){
+        // GASが発行したIDで追加
+        var realId = res.id;
+        S.trainees.push({id:realId,name:name,joinDate:joinDate,dept:dept,type:type,note:note});
+        for(var i=0;i<TRAININGS.length;i++) S.records.push({tid:realId,rid:TRAININGS[i].id,st:'pending',dt:''});
+        renderAll();
+        toast(name+' を追加しました');
+        // キャッシュを無効化してから次回ポーリングで最新取得
+        LS.set(CACHE_KEY, '');
+      } else {
+        toast('保存に失敗しました。時間をおいて再試行してください', true);
+      }
+    });
 }
 
 function openAddSchedule(){
@@ -1594,6 +1638,7 @@ function init(){
   loadData();
   // 30秒ごとに自動更新（複数人同時編集対応）
   setInterval(function(){
+    if(_writing > 0) return; // 書き込み中はスキップ
     if(GAS_URL){ loadData(true); }
     else if(document.visibilityState!=='hidden'){ loadData(false); }
   }, 30000);
