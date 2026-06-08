@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SKグループ 研修管理システム</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif}
+body{background:#f1f3f5;color:#1a1a1a;font-size:14px;position:relative}
+@media(prefers-color-scheme:dark){
+  body{background:#1c1c1e;color:#f2f2f7}
+  .card,.modal-box,.tbl th,.sidebar{background:#2c2c2e!important}
+  input,select,textarea{background:#3a3a3c!important;color:#f2f2f7!important;border-color:#555!important}
+  .sidebar-btn:hover{background:#3a3a3c!important}
+}
+
+/* ── Layout shell ── */
+.app-shell{display:flex;flex-direction:column;min-height:100vh}
+.main-area{display:flex;flex:1}
+/* PC: sidebar layout */
+@media(min-width:769px){
+  .app-shell{flex-direction:column}
+  .main-area{flex-direction:row}
+  .sidebar{display:flex!important;flex-direction:column;width:200px;background:#fff;border-right:1px solid #e0e0e0;flex-shrink:0;padding:12px 0}
+  .nav{display:none!important}
+  .content-wrap{flex:1;overflow-x:hidden;padding:20px 24px;max-width:100%}
+  .page{padding:0}
+  .metric-grid{grid-template-columns:repeat(4,1fr)!important}
+  .two-col{grid-template-columns:1fr 1fr!important}
+  .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .tbl{font-size:13px}
+}
+/* Mobile */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .content-wrap{flex:1;padding:0}
+  .page{padding:10px}
+  .dash-grid{display:block}
+}
+
+/* ── Header ── */
+.hdr{background:#1a6b3a;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0}
+.hdr-logo{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
+.hdr-logo svg{width:22px;height:22px;fill:#fff;flex-shrink:0}
+.hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.sync-pill{font-size:10px;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.2);white-space:nowrap}
+.btn-add{background:#fff;color:#1a6b3a;border:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+/* ── Sidebar nav (PC) ── */
+.sidebar{display:none}
+.sidebar-btn{display:flex;align-items:center;gap:10px;padding:10px 16px;border:none;background:none;font-size:13px;color:#555;cursor:pointer;width:100%;text-align:left;border-left:3px solid transparent;transition:.15s}
+.sidebar-btn:hover{background:#f8f9fa}
+.sidebar-btn.on{color:#1a6b3a;border-left-color:#1a6b3a;font-weight:700;background:#e8f5ee}
+.sidebar-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.sidebar-section{padding:12px 16px 4px;font-size:10px;font-weight:700;color:#aaa;letter-spacing:.08em;text-transform:uppercase}
+
+/* ── Mobile nav ── */
+.nav{background:#fff;border-bottom:1px solid #e0e0e0;display:flex;overflow-x:auto;flex-shrink:0}
+.nav-btn{flex:1;min-width:56px;padding:9px 4px;border:none;background:none;font-size:10px;color:#888;cursor:pointer;border-bottom:2px solid transparent;text-align:center;white-space:nowrap}
+.nav-btn.on{color:#1a6b3a;border-bottom-color:#1a6b3a;font-weight:700}
+.nav-btn svg{display:block;width:18px;height:18px;margin:0 auto 2px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* ── Pages ── */
+.page{display:none;padding:12px}
+.page.on{display:block}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:12px;border:1px solid #e0e0e0;overflow:hidden;margin-bottom:12px}
+.card-hdr{padding:12px 14px;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700}
+.card-body{padding:12px 14px}
+
+/* ── Metrics ── */
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.metric{background:#fff;border-radius:10px;border:1px solid #e0e0e0;padding:12px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.metric:hover{border-color:#1a6b3a;box-shadow:0 2px 8px rgba(26,107,58,.1)}
+.metric:active{transform:scale(.97)}
+.metric-lbl{font-size:10px;color:#888;margin-bottom:4px;white-space:nowrap}
+.metric-val{font-size:22px;font-weight:700;line-height:1}
+.metric-sub{font-size:10px;color:#888;margin-top:3px;white-space:nowrap}
+.two-col{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:600px) and (max-width:768px){.two-col{grid-template-columns:1fr 1fr}}
+
+/* ── Alert ── */
+.alert-bar{background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#dc2626}
+
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{background:#f8f9fa;font-weight:600;color:#888;text-align:left;padding:8px 10px;border-bottom:1px solid #e0e0e0;white-space:nowrap;font-size:11px}
+.tbl td{padding:9px 10px;border-bottom:1px solid #e0e0e0;vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:none}
+.nm{font-weight:600;white-space:nowrap}
+.nm-sub{font-size:10px;color:#888;margin-top:1px;white-space:nowrap}
+
+/* ── Tags ── */
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
+.tag-g{background:#dcfce7;color:#166534}
+.tag-r{background:#fef2f2;color:#dc2626}
+.tag-b{background:#dbeafe;color:#1e40af}
+.tag-gray{background:#f1f3f5;color:#555}
+
+/* ── Progress bar ── */
+.pg-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.pg-lbl{font-size:11px;color:#555;width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg-bar{flex:1;height:7px;background:#e0e0e0;border-radius:99px;overflow:hidden}
+.pg-fill{height:7px;background:#1a6b3a;border-radius:99px}
+.pg-pct{font-size:10px;color:#888;width:28px;text-align:right}
+
+/* ── Schedule ── */
+.sch-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #e0e0e0}
+.sch-item:last-child{border-bottom:none}
+.sch-date{width:40px;text-align:center;flex-shrink:0}
+.sch-day{font-size:18px;font-weight:700;line-height:1}
+.sch-mon{font-size:9px;color:#888;text-transform:uppercase}
+.sch-nm{font-size:13px;font-weight:600}
+.sch-dt{font-size:11px;color:#888;margin-top:2px}
+
+/* ── Training item ── */
+.tr-item{background:#f8f9fa;border-radius:8px;margin-bottom:8px;overflow:hidden;border:1px solid transparent}
+.tr-item.open{border-color:#1a6b3a}
+.tr-row{display:flex;align-items:center;gap:10px;padding:10px;min-width:0}
+.tr-num{width:26px;height:26px;border-radius:50%;background:#1a6b3a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.tr-body{flex:1;min-width:0;overflow:hidden}
+.tr-nm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-sub-nm{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:769px){.tr-nm{font-size:14px}.tr-btns{flex-wrap:nowrap!important}}
+.tr-btns{display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.tr-preview{display:none;border-top:1px solid #e0e0e0}
+.tr-preview.on{display:block}
+.tr-preview iframe{width:100%;height:480px;border:none;display:block}
+.tr-content-panel{display:none;border-top:1px solid #e0e0e0;background:#fff;padding:12px}
+.tr-content-panel.on{display:block}
+.tr-content-ta{width:100%;min-height:120px;font-size:12px;line-height:1.7;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;resize:vertical;font-family:inherit;color:#1a1a1a;background:#f8f9fa}
+.btn-expand{display:flex;align-items:center;gap:3px;padding:4px 9px;border:1px solid #ccc;border-radius:99px;font-size:11px;font-weight:600;color:#555;background:transparent;cursor:pointer;white-space:nowrap}
+.btn-expand.on{border-color:#1a6b3a;color:#1a6b3a;background:#e8f5ee}
+.btn-save-txt{font-size:11px;padding:4px 12px;border-radius:99px;border:1px solid #1a6b3a;color:#1a6b3a;background:transparent;cursor:pointer;margin-top:8px}
+.chevron{display:inline-block;transition:transform .2s;font-style:normal}
+.btn-expand.on .chevron{transform:rotate(180deg)}
+
+/* ── Buttons ── */
+.btn-sm{padding:5px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #ccc;background:transparent;color:#555;white-space:nowrap}
+.btn-sm.green{border-color:#1a6b3a;color:#1a6b3a;background:#e8f5ee}
+.btn-sm.gray{border-color:#ccc;color:#888;opacity:.5;cursor:default}
+.btn-icon{background:none;border:1px solid #ccc;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#555}
+.btn-primary{background:#1a6b3a;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-cancel{padding:8px 16px;border:1px solid #ccc;border-radius:8px;background:transparent;font-size:13px;cursor:pointer;color:#555}
+.btn-danger{padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer}
+
+/* ── Check items ── */
+.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.check-item{display:flex;align-items:center;gap:7px;padding:8px;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer}
+.check-item.done{background:#e8f5ee;border-color:#86efac}
+.check-item.late{background:#fef2f2;border-color:#fca5a5}
+.ci-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.ci-done{background:#1a6b3a;color:#fff}
+
+/* ── Responsive helpers ── */
+.logo-full{display:inline}
+.logo-short{display:none}
+.col-pc{display:table-cell}
+.sync-pill-hide{display:none}
+@media(max-width:768px){
+  .logo-full{display:none}
+  .logo-short{display:inline}
+  .col-pc{display:none!important}
+  .sync-pill-hide{display:none!important}
+  .hdr{padding:8px 12px;gap:6px}
+  .metric-val{font-size:18px}
+  .tbl td,.tbl th{padding:7px 8px}
+  .btn-sm{padding:4px 8px;font-size:10px}
+  .btn-expand{padding:4px 8px;font-size:10px}
+}
+@media(min-width:769px){
+  .logo-full{display:inline}
+  .logo-short{display:none}
+  .col-pc{display:table-cell}
+  .sync-pill-hide{display:inline}
+}
+.ci-late{background:#dc2626;color:#fff}
+.ci-prog{background:#2563eb;color:#fff}
+.ci-pend{background:#e0e0e0;color:#888}
+
+/* ── Modals ── */
+.overlay{display:none;position:absolute;top:0;left:0;width:100%;min-height:100%;background:rgba(0,0,0,.5);z-index:999;align-items:flex-start;justify-content:center;padding:20px}
+.overlay.on{display:flex}
+.modal-box{background:#fff;border-radius:14px;padding:18px;width:460px;max-width:100%;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:14px}
+.form-row{margin-bottom:11px}
+.form-lbl{font-size:11px;color:#888;margin-bottom:3px;display:block}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;font-family:inherit;background:#fff}
+textarea{resize:vertical;min-height:60px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+
+/* ── Misc ── */
+.empty{text-align:center;padding:28px;color:#888;font-size:12px}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid #e0e0e0;border-top-color:#1a6b3a;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:relative;display:none;margin:8px 12px;background:#1a6b3a;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;text-align:center}
+.toast.on{display:block}
+.toast.err{background:#dc2626}
+.gas-info{background:#fdf6e3;border:1px solid #c9a227;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#7a5c00}
+.gas-info input{margin-top:6px;font-family:monospace;font-size:11px}
+.yt-block{background:#f8f9fa;border-radius:8px;margin-bottom:8px;overflow:hidden;border:1px solid #e0e0e0}
+.yt-preview{display:none}
+.yt-preview.on{display:block}
+.note-lbl{font-size:11px;color:#888;display:block;margin-bottom:3px;margin-top:10px}
+/* ── Admin PIN ── */
+.pin-overlay{display:none;position:absolute;top:0;left:0;width:100%;min-height:100%;background:rgba(0,0,0,.72);z-index:9999;align-items:flex-start;justify-content:center;padding-top:60px}
+.pin-overlay.on{display:flex}
+.pin-box{background:#1c1c1e;border-radius:22px;padding:28px 20px 20px;width:290px;max-width:92%;text-align:center}
+.pin-title{color:#fff;font-size:18px;font-weight:600;margin-bottom:4px}
+.pin-sub{color:#8e8e93;font-size:13px;margin-bottom:24px}
+.pin-dots{display:flex;justify-content:center;gap:16px;margin-bottom:28px;height:16px}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:1.5px solid #555;background:transparent;transition:background .1s,border-color .1s}
+.pin-dot.filled{background:#fff;border-color:#fff}
+.pin-dot.shake{animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pin-err{color:#ff3b30;font-size:12px;min-height:16px;margin-bottom:10px}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px}
+.pin-key{height:72px;width:72px;margin:0 auto;border-radius:50%;background:#2c2c2e;border:none;color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:background .1s}
+.pin-key:active,.pin-key.pressed{background:#48484a}
+.pin-key .kn{font-size:26px;font-weight:300;line-height:1}
+.pin-key .kl{font-size:9px;letter-spacing:.15em;color:#8e8e93;margin-top:1px;text-transform:uppercase}
+.pin-key.empty{background:transparent;cursor:default}
+.pin-key.del-key{background:transparent;font-size:22px}
+.pin-key.cancel-key{background:transparent;font-size:14px;color:#fff}
+.lock-btn{background:none;border:none;cursor:pointer;padding:5px;line-height:0;opacity:.85}
+.lock-btn svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2}
+.edit-mode-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:12px;font-weight:600;padding:5px 12px;border-radius:99px;cursor:pointer;white-space:nowrap;letter-spacing:.02em}
+body.admin .edit-mode-btn{background:#ffd60a;border-color:#ffd60a;color:#1a1a1a}
+.admin-pill{font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(255,214,10,.25);color:#ffd60a;display:none;font-weight:600}
+.admin-pill.on{display:inline}
+.adm{display:none}
+body.admin .adm{display:inline-flex}
+body.admin .adm-block{display:flex}
+.adm-block{display:none}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="app-shell">
+<div class="hdr">
+  <div class="hdr-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span class="logo-full">SKグループ 研修管理</span>
+    <span class="logo-short">SK 研修</span>
+    <span class="admin-pill" id="admin-pill">管理者</span>
+  </div>
+  <span class="sync-pill sync-pill-hide" id="sync-lbl">読み込み中...</span>
+  <div class="hdr-right">
+    <button class="edit-mode-btn" id="edit-mode-btn" onclick="openPin()">編集</button>
+    <button class="btn-add adm" id="btn-add-trainee" onclick="openAddTrainee()">+ 受講者追加</button>
+  </div>
+</div>
+
+<!-- Mobile Nav -->
+<div class="nav" id="main-nav">
+  <button class="nav-btn on" onclick="showPage('dashboard',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    ダッシュボード
+  </button>
+  <button class="nav-btn" onclick="showPage('trainees',this)">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    受講者
+  </button>
+  <button class="nav-btn" onclick="showPage('schedule',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    スケジュール
+  </button>
+  <button class="nav-btn" onclick="showPage('master',this)">
+    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    研修
+  </button>
+  <button class="nav-btn" onclick="showPage('interviewers',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><circle cx="19" cy="7" r="3"/><path d="M22 12c1.2.8 2 2.2 2 3.8"/></svg>
+    面談者
+  </button>
+</div>
+
+<div class="main-area">
+<!-- PC Sidebar -->
+<div class="sidebar" id="pc-sidebar">
+  <div class="sidebar-section">メニュー</div>
+  <button class="sidebar-btn on" onclick="showPage('dashboard',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    ダッシュボード
+  </button>
+  <button class="sidebar-btn" onclick="showPage('trainees',this)">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    受講者管理
+  </button>
+  <button class="sidebar-btn" onclick="showPage('schedule',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    スケジュール
+  </button>
+  <button class="sidebar-btn" onclick="showPage('master',this)">
+    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    研修マスタ
+  </button>
+  <button class="sidebar-btn" onclick="showPage('interviewers',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><circle cx="19" cy="7" r="3"/><path d="M22 12c1.2.8 2 2.2 2 3.8"/></svg>
+    面談者
+  </button>
+</div>
+<div class="content-wrap">
+
+<!-- Pages -->
+<div id="pg-dashboard" class="page on">
+  <div id="dash-alert"></div>
+  <div class="metric-grid" id="dash-metrics"><div class="metric"><div class="metric-lbl">読み込み中</div><div class="spinner"></div></div></div>
+  <div class="two-col dash-grid">
+    <div class="card"><div class="card-hdr">研修別完了率</div><div class="card-body" id="dash-prog"></div></div>
+    <div class="card"><div class="card-hdr">直近スケジュール</div><div class="card-body" id="dash-sch"></div></div>
+  </div>
+</div>
+
+<div id="pg-trainees" class="page">
+  <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px">
+    <button class="btn-sm on-filter" onclick="setFilter('all',this)" style="white-space:nowrap;flex-shrink:0">全員</button>
+    <button class="btn-sm" onclick="setFilter('late',this)" style="white-space:nowrap;flex-shrink:0">&#9888; 遅延</button>
+    <button class="btn-sm" onclick="setFilter('inprogress',this)" style="white-space:nowrap;flex-shrink:0">進行中</button>
+    <button class="btn-sm" onclick="setFilter('done',this)" style="white-space:nowrap;flex-shrink:0">&#10003; 完了</button>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr>
+      <th style="padding-left:12px">氏名</th>
+      <th class="col-pc">入社日</th>
+      <th class="col-pc">経過</th>
+      <th style="text-align:center;width:56px">進捗</th>
+      <th>状態</th>
+      <th></th>
+    </tr></thead>
+    <tbody id="trainee-tbody"><tr><td colspan="6" class="empty"><div class="spinner"></div></td></tr></tbody>
+  </table></div></div>
+</div>
+
+<div id="pg-schedule" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span style="font-weight:700;font-size:13px">研修スケジュール</span>
+    <button class="btn-primary adm" style="font-size:12px;padding:6px 12px" onclick="openAddSchedule()" style="flex-shrink:0">+ 予定追加</button>
+  </div>
+  <div class="card card-body" id="sch-list"><div class="empty"><div class="spinner"></div></div></div>
+</div>
+
+<div id="pg-master" class="page">
+  <div class="card"><div class="card-hdr">研修プログラム</div><div class="card-body" id="master-list"><div class="empty"><div class="spinner"></div></div></div></div>
+</div>
+
+<div id="pg-interviewers" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span style="font-weight:700;font-size:13px">面談者マスタ</span>
+    <button class="btn-primary adm" style="font-size:12px;padding:6px 12px" onclick="openAddInterviewer()" style="flex-shrink:0">+ 面談者追加</button>
+  </div>
+  <div class="card" id="itvw-card"><div class="empty"><div class="spinner"></div></div></div>
+</div>
+
+<!-- GAS banner (inside pages, shown when needed) -->
+</div><!-- /content-wrap -->
+</div><!-- /main-area -->
+</div><!-- /app-shell -->
+
+<div id="gas-banner" style="display:none;padding:0 12px 12px">
+  <div class="gas-info">
+    &#9881; GAS URL未設定。デモデータで動作中。
+    <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" onchange="setGasUrl(this.value)">
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="overlay" id="m-trainee">
+  <div class="modal-box">
+    <div class="modal-title">受講者を追加</div>
+    <div class="form-row"><label class="form-lbl">氏名 *</label><input type="text" id="f-name" placeholder="山田 太郎"></div>
+    <div class="form-row"><label class="form-lbl">入社日 *</label><input type="date" id="f-join"></div>
+    <div class="form-row"><label class="form-lbl">所属</label><input type="text" id="f-dept" placeholder="ユニット2"></div>
+    <div class="form-row"><label class="form-lbl">雇用区分</label>
+      <select id="f-type"><option value="中途">中途</option><option value="新卒大学">新卒（大学）</option><option value="新卒高卒">新卒（高卒）</option></select>
+    </div>
+    <div class="form-row"><label class="form-lbl">メモ</label><textarea id="f-note"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeM('m-trainee')">キャンセル</button>
+      <button class="btn-primary" onclick="saveTrainee()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-schedule">
+  <div class="modal-box">
+    <div class="modal-title">スケジュールを追加</div>
+    <div class="form-row"><label class="form-lbl">研修 *</label><select id="s-tr"></select></div>
+    <div class="form-row"><label class="form-lbl">開催日 *</label><input type="date" id="s-date"></div>
+    <div class="form-row"><label class="form-lbl">担当講師</label><input type="text" id="s-lec" placeholder="田中 マネージャー"></div>
+    <div class="form-row"><label class="form-lbl">場所</label><input type="text" id="s-loc" placeholder="研修室A"></div>
+    <div class="form-row"><label class="form-lbl">定員</label><input type="number" id="s-att" value="5" min="1"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeM('m-schedule')">キャンセル</button>
+      <button class="btn-primary" onclick="saveSchedule()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-detail">
+  <div class="modal-box" style="width:540px" id="detail-inner"></div>
+</div>
+
+<div class="overlay" id="m-material">
+  <div class="modal-box">
+    <div class="modal-title">資料URLを登録</div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px">Google DriveのURLを貼り付け（「リンクを知っている全員が閲覧可」設定が必要です）</div>
+    <div class="form-row"><label class="form-lbl">研修名</label><div id="mat-nm" style="font-weight:700;font-size:13px;padding:4px 0"></div></div>
+    <div class="form-row"><label class="form-lbl">Google Drive URL</label><input type="url" id="mat-url" placeholder="https://drive.google.com/file/d/..." style="font-family:monospace;font-size:11px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeM('m-material')">キャンセル</button>
+      <button class="btn-danger" id="mat-del" onclick="deleteMat()" style="display:none">URL削除</button>
+      <button class="btn-primary" onclick="saveMat()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-deadline">
+  <div class="modal-box" style="width:360px">
+    <div class="modal-title">実施期限を変更</div>
+    <div class="form-row"><label class="form-lbl">研修名</label><div id="dead-nm" style="font-weight:700;font-size:13px;padding:4px 0"></div></div>
+    <div class="form-row">
+      <label class="form-lbl">入社後〇日以内（現在：<span id="dead-cur"></span>日）</label>
+      <input type="number" id="dead-val" min="1" max="365" style="width:100px">
+      <span style="font-size:12px;color:#888;margin-left:8px">日以内</span>
+    </div>
+    <div style="font-size:11px;color:#888;margin-top:-6px;margin-bottom:8px">※ 変更するとアラート判定に即反映されます</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeM('m-deadline')">キャンセル</button>
+      <button class="btn-primary" onclick="saveDeadline()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-yt">
+  <div class="modal-box">
+    <div class="modal-title">動画URLを登録</div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px">YouTubeのURLを貼り付けてください。URLは受講者には表示されません。</div>
+    <div class="form-row"><label class="form-lbl">YouTube URL</label><input type="url" id="yt-url" placeholder="https://youtu.be/XXXXXXXXXXX" style="font-family:monospace;font-size:11px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeM('m-yt')">キャンセル</button>
+      <button class="btn-danger" onclick="deleteYt()">URL削除</button>
+      <button class="btn-primary" onclick="saveYt()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="m-itvw">
+  <div class="modal-box">
+    <div class="modal-title" id="itvw-title">面談者を追加</div>
+    <input type="hidden" id="itvw-id">
+    <div class="form-row"><label class="form-lbl">氏名 *</label><input type="text" id="itvw-nm" placeholder="田中 マネージャー"></div>
+    <div class="form-row"><label class="form-lbl">役職・所属</label><input type="text" id="itvw-role" placeholder="ユニット2 マネージャー"></div>
+    <div class="form-row"><label class="form-lbl">メモ</label><textarea id="itvw-note"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeM('m-itvw')">キャンセル</button>
+      <button class="btn-danger" id="itvw-del" onclick="deleteItvw()" style="display:none">削除</button>
+      <button class="btn-primary" onclick="saveItvw()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN Modal -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-title" id="pin-title">管理者モード</div>
+    <div class="pin-sub" id="pin-sub">パスコードを入力</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-err" id="pin-err"></div>
+    <div class="pin-grid">
+      <button class="pin-key" onclick="pinTap('1')"><span class="kn">1</span><span class="kl"></span></button>
+      <button class="pin-key" onclick="pinTap('2')"><span class="kn">2</span><span class="kl">ABC</span></button>
+      <button class="pin-key" onclick="pinTap('3')"><span class="kn">3</span><span class="kl">DEF</span></button>
+      <button class="pin-key" onclick="pinTap('4')"><span class="kn">4</span><span class="kl">GHI</span></button>
+      <button class="pin-key" onclick="pinTap('5')"><span class="kn">5</span><span class="kl">JKL</span></button>
+      <button class="pin-key" onclick="pinTap('6')"><span class="kn">6</span><span class="kl">MNO</span></button>
+      <button class="pin-key" onclick="pinTap('7')"><span class="kn">7</span><span class="kl">PQRS</span></button>
+      <button class="pin-key" onclick="pinTap('8')"><span class="kn">8</span><span class="kl">TUV</span></button>
+      <button class="pin-key" onclick="pinTap('9')"><span class="kn">9</span><span class="kl">WXYZ</span></button>
+      <button class="pin-key cancel-key" onclick="closePin()"><span class="kn" style="font-size:14px">キャンセル</span></button>
+      <button class="pin-key" onclick="pinTap('0')"><span class="kn">0</span><span class="kl"></span></button>
+      <button class="pin-key del-key" onclick="pinDel()"><span class="kn">&#9003;</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Metric Detail Modal -->
+<div class="overlay" id="m-metric">
+  <div class="modal-box" style="width:500px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="modal-title" id="metric-modal-title" style="margin-bottom:0"></div>
+      <button class="btn-cancel" style="padding:4px 12px;font-size:12px" onclick="closeM('m-metric')">閉じる</button>
+    </div>
+    <div id="metric-modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ================================================================
+// Safe localStorage
+// ================================================================
+var LS = (function(){
+  var ok = false;
+  try{ localStorage.setItem('_x','1'); localStorage.removeItem('_x'); ok=true; }catch(e){}
+  return {
+    get: function(k,d){ try{ if(!ok) return d; var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } },
+    set: function(k,v){ try{ if(ok) localStorage.setItem(k,v); }catch(e){} }
+  };
+})();
+
+// ================================================================
+// Data
+// ================================================================
+var GAS_URL = LS.get('sk_gas','');
+var CACHE_KEY = 'sk_cache';
+var CACHE_TTL = 30*1000;
+
+var TRAININGS = [
+  {id:1,name:'導入編',sub:'The Purpose Workshop',deadline:14,materialUrl:''},
+  {id:2,name:'挨拶編',sub:'サイコーの挨拶',deadline:21,materialUrl:''},
+  {id:3,name:'身だしなみ編',sub:'プロフェッショナル・ルックブック',deadline:28,materialUrl:''},
+  {id:4,name:'清掃編',sub:'清掃マイスターへの道',deadline:35,materialUrl:''},
+  {id:5,name:'企業理念・経営方針編',sub:'私たちの北極星',deadline:42,materialUrl:''},
+  {id:6,name:'クレドカード編',sub:'すべての行動の基本',deadline:49,materialUrl:''},
+  {id:7,name:'確認テスト編',sub:'総仕上げ（15問中13問以上で合格）',deadline:56,materialUrl:''}
+];
+
+var TRAINING_TEXTS = {
+  1: '【目的】\n何のために働くのか（The Purpose Workshop）を問いかける導入研修。「作業」ではなく「目的」を持って働くプロフェッショナルへの第一歩。\n\n【内容】\n・心理的安全性の構築・相互理解ワーク\n・自己紹介ワーク（前職・家族・趣味について）\n・レンガ職人の寓話 動画視聴（約5分）\n・3人の職人の考え方\n  ①作業型：「レンガを積んでいるだけ」（言われた仕事をこなす）\n  ②生活型：「家族を養うために働いている」（報酬のために働く）\n  ③目的型：「歴史に残る大聖堂を造っている」（使命を持って働く）\n\n【自己評価の問い】\nあなたは今、3人のうち誰に最も近いですか？\n正直に考えてみてください。正解はありません。\n\n・SKグループ核心理念：「リサイクル事業を通じ、住み良い環境づくりを目指し、資源循環型社会の持続的発展に貢献します」\n・ディスカッション（ペア or グループ）\n・行動宣言：「私は___として、___のために働きます」\n\n【所要時間】約90分',
+
+  2: '【目的】\n「単なる礼儀」から「最大の武器」へ。挨拶をSKグループの差別化戦略として体得する。\n\n【内容】\n・挨拶一つで会社の印象が劇的に変わる問いかけ\n・SKグループが挨拶にこだわる理由（差別化戦略）\n\n・5つの約束\n  ①笑顔をセットにする（口角を上げ、目も笑う）\n  ②相手の目を見る（視線が信頼をつくる）\n  ③声色（ソ・ラの明るいトーン）\n    ※ピアノの音階でいうと「ソ」と「ラ」の間の高さ。\n    低すぎず高すぎず、明るく聞こえるトーンが目安。\n  ④順序（語先後礼：言葉を先に、お辞儀は後）\n  ⑤動作（完全に立ち止まる、ながら挨拶は厳禁）\n\n・ロールプレイ（2人1組）\n  笑顔・視線・声色・立ち止まりをお互いにチェック\n  フィードバックし合う（「素晴らしい点」と「改善できる点」を1つずつ）\n・行動宣言\n\n【所要時間】約60分',
+
+  3: '【目的】\n誰からも愛される身だしなみの基本ルール（プロフェッショナル・ルックブック）を習得する。\n\n【内容】\n・「おしゃれ」と「身だしなみ」の違い\n  おしゃれ → 目的：自分のため　基準：個性・流行　ゴール：自分が満足するか\n  身だしなみ → 目的：お客様のため　基準：信頼感・安心感　ゴール：相手に不快感を与えないか\n\n・3つの柱：①上品 ②清潔 ③控えめ\n\n・全身4ゾーンチェックとNG/OK例\n  Zone1 髪・顔（清潔感の要）\n    NG：派手なカラー・整えていない髭・耳毛・鼻毛\n    OK：黒・茶・暗めのナチュラルカラー、清潔感最優先\n  Zone2 服装・上半身（信頼の証）\n    NG：制服を開けたまま・シャツの裾を出す・名札なし\n    OK：制服はしっかり閉め、名札を胸に着用\n  Zone3 ズボン（だらしなさを防ぐ）\n    NG：腰履き・裾を引きずる・まくる\n    OK：ウエストで履き、裾は地面につかない長さ\n  Zone4 靴（安全と基本）\n    NG：ソールが減ったまま・安全靴を着用しない\n    OK：安全靴を必ず着用、ソールを定期チェック\n\n・イレギュラー対応：汗・雨・タオルのルール\n・毎日の2ステップチェック（出勤前・始業前）\n・ペアワーク（自己採点・改善点の話し合い）\n・行動宣言：「私は明日から、Zone [　] の [　　　　] を徹底します！」\n\n【所要時間】約60分',
+
+  4: '【目的】\nSKグループ創業からの精神「来た時よりもきれいにして帰る」を体現する清掃マイスターを育成する。清掃はお客様への「思いやり」であり、私たちの「姿勢」そのもの。\n\n【SKグループの創業精神】\n「来た時よりもきれいにして帰る」\n清掃は単なる「片付け」ではありません。\nお客様への思いやりであり、私たちの姿勢そのものです。\n\n【内容】\n・清潔な場所と汚い場所、どちらに安心感・信頼感を持つか？（問いかけ）\n・清掃が与える第一印象は、言葉以上のメッセージを持っている\n\n・5つの具体的アクション\n  ①ゴミ拾い：床に落ちていたらすぐ拾う\n  ②スリッパ整理：トイレ等で乱れていたら揃える\n  ③水拭き：手洗い場が濡れていたらサッと拭く\n  ④ゴミ交換：あふれる前に先回りして交換\n  ⑤置き場清掃：回収後の置き場を美しく保つ\n\n・絶対基準：「気づいた人が、すぐやる」\n  「誰かの仕事」ではなく「私の仕事」として動く\n  見えないところも整える人が、真のプロフェッショナル\n\n・NG例 vs OK例\n  NG：気づいても見て見ぬふり / 「清掃担当の仕事」と割り切る\n  OK：気づいた瞬間に体が動く / 自発的に周囲を整える\n\n・行動宣言：「私は明日から、[　　　　] を必ず実践します！」\n\n【所要時間】約60分',
+
+  5: '【目的】\n企業理念と経営方針を「壁の言葉」から自分の「武器」に変える（私たちの北極星）。\n\n【内容】\n・なぜこの会社は存在しているのか？（Let\'s Think：正解なし）\n\n・企業理念（北極星）\n  「リサイクル事業を通じ、住み良い環境づくりを目指し、\n  資源循環型社会の持続的発展に貢献します」\n\n・経営方針は2つのベクトルで構成される\n\n  ＜外に向かうベクトル＞　お客様・社会への行動指針\n    ①出会い：人との出会いを大切にする\n    ②信頼：社会に信頼される企業であること\n    ③感動：お客様に感動していただける企業であること\n\n  ＜内に向かうベクトル＞　社員と会社の成長への指針\n    ④個性：社員が能力と個性を発揮する\n    ⑤成長：社員とともに成長する\n    ⑥豊かさ：「しあわせ、ゆとり、豊かさ」を味わえる企業であること\n\n・理念を体現する3つの武器：挨拶・身だしなみ・清掃\n  → 挨拶は「信頼」の入口　身だしなみは「安心感」の土台　清掃は「住みよい環境づくり」の第一歩\n\n・Deep Diveワーク\n  「あなたの今の仕事は、誰の『しあわせ』に繋がっていますか？」\n  （目の前のお客様？一緒に働く仲間？家族？未来の子どもたち？）\n\n・Declaration of Action（行動宣言）\n  「私、（氏名）は、理念を体現するために　明日から【　　　　　　　　】を実践します！」\n\n【所要時間】約60分',
+
+  6: '【目的】\nクレドカード（行動指針）を現場の判断基準として活用できるようにする（すべての行動の基本）。\n\n【クレドとは】\nSKグループの思いが詰まったツール。\n最大のポイント：すべての主語が「会社」ではなく「私」。\n「どうするべきか」ではなく「私はどう行動するか」の決意表明。\n\n【10の指針と、なぜ大切か】\n①挨拶：はつらつとした笑顔で元気に挨拶をします\n　→ 相手の心を開く入口。SKグループ最大の差別化戦略\n②真摯：目の前の人・物事に対して真摯に向き合います\n　→ 誠実さが信頼の土台をつくる\n③環境：自分だけでなく相手のことも考えて行動します\n　→ 清掃・整理整頓・思いやりの行動につながる\n④成長：常に新しい自分と出会うために、成長し続けます\n　→ 停滞は後退。学び続ける姿勢が組織を強くする\n⑤感動：期待を上回る努力をして、喜びを共有します\n　→ 「当たり前+α」がお客様感動を生む\n⑥個性：お互いの個性を認め、活かすことで最高のパフォーマンスを発揮します\n　→ チームの多様性が強さになる\n⑦礼儀：清潔感を保ち、礼儀正しい行動をします\n　→ 身だしなみ・言葉遣い・態度すべてが礼儀\n⑧安全：自分の身を守るために安全を最優先します\n　→ 事故は自分も会社も傷つける。安全は最優先事項\n⑨感謝：支えられていることを理解し、常に感謝の気持ちをもちます\n　→ 仕事は一人ではできない。感謝が職場を温かくする\n⑩追求：しあわせ・ゆとり・豊かさを感じ、満足感のある人生を追求します\n　→ 充実した人生が、充実した仕事につながる\n\n・具体例：回収現場でゴミが散乱していたとき\n  指示待ち：「自分の仕事（回収作業）ではないから無視する」\n  クレド実践：指針③と⑦を実践「環境をよりよくするため、自ら気づいて拾う」\n\n・ワーク：10の指針から1つ選び「私はどう動くか」を具体的な行動に変換する\n・行動宣言\n\n【所要時間】約60分',
+
+  7: '【目的】\n学んだことを「できる」に変える総仕上げ確認テスト（実戦編）。\n知識を現場での「行動」に結びつけるための最終確認。\n迷ったときは、お客様の視点に立って考えてみましょう！\n\n【合格基準】15問中13問以上正解\n\n【第1部：○×クイズ（全10問）】\nQ1  挨拶は単なる礼儀である\n　→ × 挨拶は信頼関係を築く「戦略的行動」。SKグループ最大の差別化戦略。\n\nQ2  挨拶は信頼関係を築く行動である\n　→ ○ 笑顔・視線・声色・語先後礼・立ち止まりの5つが信頼をつくる。\n\nQ3  挨拶では言葉より先にお辞儀をする\n　→ × 正しくは「語先後礼」。言葉を先に言ってからお辞儀する。\n\nQ4  身だしなみは自分のために行うものである\n　→ × お客様に安心感を与えるため。基準は「信頼感・安心感」。\n\nQ5  身だしなみはお客様に安心感を与えるために行う\n　→ ○ 身だしなみの目的はお客様への安心感と信頼感の提供。\n\nQ6  清掃は決められた担当者だけが行えばよい\n　→ × 「気づいた人が、すぐやる」が絶対基準。全員が主体的に動く。\n\nQ7  ゴミに気づいたら拾うのが基本である\n　→ ○ 「来た時よりもきれいにして帰る」がSKグループの創業精神。\n\nQ8  クレドは覚えることが目的である\n　→ × 「持つだけ・覚えるだけ」では意味がない。現場で判断基準として使うことが目的。\n\nQ9  クレドは行動の判断基準である\n　→ ○ 現場で迷ったとき、立ち返る「確実な場所」がクレド。\n\nQ10 理念は日々の仕事と関係がある\n　→ ○ 理念は「きれいごと」ではない。理念は「行動」でしか表現できない。\n\n【第2部：理念・方針の穴埋め（全5問）】\nQ1  リサイクル事業を通じ、住み良い（　　）づくりを目指し、資源循環型社会の持続的発展に貢献します\n　→ 環境\n\nQ2  人との（　　）を大切にし、社会に信頼される企業であること\n　→ 出会い\n\nQ3  社員が能力と（　　）を発揮し、お客様に感動していただける企業であること\n　→ 個性\n\nQ4  社員とともに（　　）し、「しあわせ、ゆとり、豊かさ」を味わえる企業であること\n　→ 成長\n\nQ5  すべての行動の基本となるのが（　　）である\n　→ クレドカード（行動指針）\n\n【第3部：行動宣言】\n10の指針の中から1つ選び、明日現場で「絶対に実践すること」を1つ決め、宣言する\n記入例：「私は明日から、トイレのスリッパが乱れていたら必ず一番に揃えます！」\n\n【所要時間】約30分'
+};
+
+var DEMO = {
+  trainees:[
+    {id:1,name:'佐藤 健一',joinDate:'2025-04-01',dept:'ユニット2',type:'中途',note:''},
+    {id:2,name:'鈴木 花子',joinDate:'2025-04-01',dept:'ユニット3',type:'中途',note:''},
+    {id:3,name:'田中 雄介',joinDate:'2025-04-15',dept:'ユニット2',type:'中途',note:''},
+    {id:4,name:'伊藤 美咲',joinDate:'2025-05-01',dept:'ユニット3',type:'中途',note:''},
+    {id:5,name:'渡辺 大輔',joinDate:'2025-05-01',dept:'ユニット2',type:'中途',note:''}
+  ],
+  records:[
+    {tid:1,rid:1,st:'done',dt:'2025-04-03'},{tid:1,rid:2,st:'done',dt:'2025-04-05'},
+    {tid:1,rid:3,st:'done',dt:'2025-04-10'},{tid:1,rid:4,st:'done',dt:'2025-04-17'},
+    {tid:1,rid:5,st:'progress',dt:''},{tid:1,rid:6,st:'pending',dt:''},{tid:1,rid:7,st:'pending',dt:''},
+    {tid:2,rid:1,st:'done',dt:'2025-04-03'},{tid:2,rid:2,st:'done',dt:'2025-04-05'},
+    {tid:2,rid:3,st:'done',dt:'2025-04-10'},{tid:2,rid:4,st:'done',dt:'2025-04-17'},
+    {tid:2,rid:5,st:'done',dt:'2025-05-01'},{tid:2,rid:6,st:'done',dt:'2025-05-10'},{tid:2,rid:7,st:'done',dt:'2025-05-20'},
+    {tid:3,rid:1,st:'done',dt:'2025-04-17'},{tid:3,rid:2,st:'done',dt:'2025-04-20'},
+    {tid:3,rid:3,st:'pending',dt:''},{tid:3,rid:4,st:'pending',dt:''},{tid:3,rid:5,st:'pending',dt:''},{tid:3,rid:6,st:'pending',dt:''},{tid:3,rid:7,st:'pending',dt:''},
+    {tid:4,rid:1,st:'done',dt:'2025-05-03'},{tid:4,rid:2,st:'done',dt:'2025-05-05'},
+    {tid:4,rid:3,st:'done',dt:'2025-05-10'},{tid:4,rid:4,st:'progress',dt:''},{tid:4,rid:5,st:'pending',dt:''},{tid:4,rid:6,st:'pending',dt:''},{tid:4,rid:7,st:'pending',dt:''},
+    {tid:5,rid:1,st:'done',dt:'2025-05-03'},{tid:5,rid:2,st:'progress',dt:''},
+    {tid:5,rid:3,st:'pending',dt:''},{tid:5,rid:4,st:'pending',dt:''},{tid:5,rid:5,st:'pending',dt:''},{tid:5,rid:6,st:'pending',dt:''},{tid:5,rid:7,st:'pending',dt:''}
+  ],
+  schedules:[
+    {id:1,rid:1,date:'2025-06-10',lec:'田中 マネージャー',loc:'研修室A',att:5},
+    {id:2,rid:2,date:'2025-06-12',lec:'田中 マネージャー',loc:'研修室A',att:5},
+    {id:3,rid:3,date:'2025-06-17',lec:'佐々木 係長',loc:'研修室B',att:4},
+    {id:4,rid:5,date:'2025-07-01',lec:'田中 マネージャー',loc:'研修室A',att:6},
+    {id:5,rid:7,date:'2025-07-15',lec:'田中 マネージャー',loc:'研修室A',att:3}
+  ]
+};
+
+var S = {
+  trainees:[], records:[], schedules:[],
+  interviewers:[], filter:'all',
+  ytUrl: LS.get('sk_yt','https://youtu.be/F_KU4DpKoU8')
+};
+
+// ================================================================
+// Helpers
+// ================================================================
+function g(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+var TODAY = new Date(); TODAY.setHours(0,0,0,0);
+var MOS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var MOS_JP = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+function daysSince(d){ return Math.floor((TODAY - new Date(d)) / 86400000); }
+
+function getRec(tid, rid){
+  for(var i=0;i<S.records.length;i++){
+    if(S.records[i].tid==tid && S.records[i].rid==rid) return S.records[i];
+  }
+  return null;
+}
+function getRecSt(tid, rid){ var r=getRec(tid,rid); return r?r.st:'pending'; }
+
+function getStatus(tr){
+  var days=daysSince(tr.joinDate);
+  var allDone=true, hasLate=false;
+  for(var i=0;i<TRAININGS.length;i++){
+    var st=getRecSt(tr.id, TRAININGS[i].id);
+    if(st!=='done') allDone=false;
+    if(st!=='done' && days>TRAININGS[i].deadline) hasLate=true;
+  }
+  return allDone?'done':hasLate?'late':'inprogress';
+}
+function getDone(tr){
+  var n=0;
+  for(var i=0;i<TRAININGS.length;i++){ if(getRecSt(tr.id,TRAININGS[i].id)==='done') n++; }
+  return n;
+}
+
+function setSync(s){
+  var el=g('sync-lbl');
+  if(!el) return;
+  el.textContent = s==='ok'?'同期済み':s==='loading'?'同期中...':'オフライン（デモ）';
+}
+
+function toast(msg, err){
+  var t=g('toast'); if(!t) return;
+  t.textContent=msg;
+  t.className='toast on'+(err?' err':'');
+  setTimeout(function(){ t.className='toast'+(err?' err':''); },3000);
+}
+
+// ================================================================
+// Load/Save localStorage extras
+// ================================================================
+function loadExtras(){
+  try{
+    var mats=JSON.parse(LS.get('sk_mats','{}'));
+    for(var i=0;i<TRAININGS.length;i++){ if(mats[TRAININGS[i].id]) TRAININGS[i].materialUrl=mats[TRAININGS[i].id]; }
+  }catch(e){}
+  try{
+    var deads=JSON.parse(LS.get('sk_deads','{}'));
+    for(var i=0;i<TRAININGS.length;i++){ if(deads[TRAININGS[i].id]) TRAININGS[i].deadline=parseInt(deads[TRAININGS[i].id]); }
+  }catch(e){}
+  try{
+    var txts=JSON.parse(LS.get('sk_txts','{}'));
+    for(var k in txts){ if(txts.hasOwnProperty(k)) TRAINING_TEXTS[parseInt(k)]=txts[k]; }
+  }catch(e){}
+  try{
+    var iv=JSON.parse(LS.get('sk_itvw','[]'));
+    S.interviewers=Array.isArray(iv)?iv:[];
+  }catch(e){ S.interviewers=[]; }
+  try{
+    var asgn=JSON.parse(LS.get('sk_asgn','{}'));
+    for(var i=0;i<S.trainees.length;i++){
+      if(asgn[S.trainees[i].id]!==undefined) S.trainees[i].itvwId=asgn[S.trainees[i].id];
+    }
+  }catch(e){}
+  loadInterviewRecords();
+}
+function saveMats(){
+  var m={};
+  for(var i=0;i<TRAININGS.length;i++){ if(TRAININGS[i].materialUrl) m[TRAININGS[i].id]=TRAININGS[i].materialUrl; }
+  LS.set('sk_mats',JSON.stringify(m));
+}
+function saveDeadlines(){
+  var m={};
+  for(var i=0;i<TRAININGS.length;i++){ m[TRAININGS[i].id]=TRAININGS[i].deadline; }
+  LS.set('sk_deads',JSON.stringify(m));
+}
+function saveItvws(){ LS.set('sk_itvw',JSON.stringify(S.interviewers)); }
+function saveAsgn(){
+  var m={};
+  for(var i=0;i<S.trainees.length;i++){ if(S.trainees[i].itvwId!==undefined) m[S.trainees[i].id]=S.trainees[i].itvwId; }
+  LS.set('sk_asgn',JSON.stringify(m));
+}
+function loadInterviewRecords(){
+  try{ S.iRecs=JSON.parse(LS.get('sk_irec','{}')); }catch(e){ S.iRecs={}; }
+}
+function saveInterviewRecords(){
+  LS.set('sk_irec',JSON.stringify(S.iRecs));
+}
+function addInterviewRecord(tid, date, content, next){
+  if(!S.iRecs[tid]) S.iRecs[tid]=[];
+  var iv=null;
+  for(var i=0;i<S.interviewers.length;i++){
+    var tr2=null;
+    for(var j=0;j<S.trainees.length;j++){ if(S.trainees[j].id==tid){ tr2=S.trainees[j]; break; } }
+    if(tr2&&S.interviewers[i].id==tr2.itvwId){ iv=S.interviewers[i].name; break; }
+  }
+  S.iRecs[tid].unshift({id:Date.now(), date:date, content:content, next:next, itvwName:iv||''});
+  saveInterviewRecords();
+}
+function deleteInterviewRecord(tid, recId){
+  if(!S.iRecs[tid]) return;
+  S.iRecs[tid]=S.iRecs[tid].filter(function(r){ return r.id!==recId; });
+  saveInterviewRecords();
+}
+
+// ================================================================
+// API
+// ================================================================
+function apiGet(){
+  if(!GAS_URL) return Promise.reject(new Error('NO_GAS'));
+  return fetch(GAS_URL+'?action=getData',{redirect:'follow'}).then(function(r){ return r.json(); });
+}
+function apiPost(body){
+  if(!GAS_URL) return Promise.resolve(null);
+  return fetch(GAS_URL,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json'},redirect:'follow'})
+    .then(function(r){ return r.json(); }).catch(function(){ return null; });
+}
+
+function setGasUrl(url){
+  GAS_URL=url.trim(); LS.set('sk_gas',GAS_URL);
+  if(GAS_URL){ g('gas-banner').style.display='none'; loadData(true); }
+}
+
+function applyData(data){
+  S.trainees  = data.trainees  || [];
+  S.records   = (data.records||[]).map(function(r){ return {tid:r.traineeId||r.tid, rid:r.trainingId||r.rid, st:r.status||r.st, dt:r.doneDate||r.dt||''}; });
+  S.schedules = (data.schedules||[]).map(function(s){ return {id:s.id, rid:s.trainingId||s.rid, date:s.date, lec:s.lecturer||s.lec||'', loc:s.location||s.loc||'', att:s.attendees||s.att||0}; });
+  loadExtras();
+  renderAll();
+}
+
+function loadData(force){
+  setSync('loading');
+  var cached=LS.get(CACHE_KEY,null);
+  if(!force&&cached){
+    try{ var c=JSON.parse(cached); if(Date.now()-c.ts<CACHE_TTL){ applyData(c.data); setSync('ok'); return; } }catch(e){}
+  }
+  apiGet().then(function(data){
+    LS.set(CACHE_KEY,JSON.stringify({ts:Date.now(),data:data}));
+    applyData(data); setSync('ok');
+  }).catch(function(e){
+    var b=g('gas-banner');
+    if(e.message==='NO_GAS'){ if(b) b.style.display='block'; }
+    var c2=LS.get(CACHE_KEY,null);
+    try{ applyData(c2?JSON.parse(c2).data:DEMO); }catch(e2){ applyData(DEMO); }
+    setSync('offline');
+  });
+}
+
+// ================================================================
+// Navigation
+// ================================================================
+function showPage(name, btn){
+  var pages=['dashboard','trainees','schedule','master','interviewers'];
+  for(var i=0;i<pages.length;i++){
+    var p=g('pg-'+pages[i]); if(p) p.className='page'+(pages[i]===name?' on':'');
+  }
+  // sync mobile nav
+  var mbtns=document.querySelectorAll('.nav-btn');
+  for(var i=0;i<mbtns.length;i++) mbtns[i].className='nav-btn';
+  // sync sidebar
+  var sbtns=document.querySelectorAll('.sidebar-btn');
+  for(var i=0;i<sbtns.length;i++) sbtns[i].className='sidebar-btn';
+  if(btn){
+    if(btn.classList.contains('nav-btn')) btn.className='nav-btn on';
+    else if(btn.classList.contains('sidebar-btn')) btn.className='sidebar-btn on';
+  }
+  // sync the other set
+  var allNavBtns=document.querySelectorAll('.nav-btn,.sidebar-btn');
+  for(var i=0;i<allNavBtns.length;i++){
+    var b=allNavBtns[i];
+    var bname=b.getAttribute('onclick');
+    if(bname&&bname.indexOf("'"+name+"'")>=0){
+      b.className=b.classList.contains('nav-btn')?'nav-btn on':'sidebar-btn on';
+    }
+  }
+  if(name==='dashboard') renderDash();
+  else if(name==='trainees') renderTrainees();
+  else if(name==='schedule') renderSchedule();
+  else if(name==='master') renderMaster();
+  else if(name==='interviewers') renderItvw();
+}
+
+function renderAll(){
+  renderDash();
+  renderTrainees();
+  renderSchedule();
+  renderMaster();
+  renderItvw();
+}
+
+// ================================================================
+// Metric Detail Modal
+// ================================================================
+function openMetricModal(type){
+  var titles = {all:'受講者一覧', done:'全研修完了メンバー', inprogress:'進行中メンバー', late:'遅延メンバー'};
+  var titleEl=g('metric-modal-title'), bodyEl=g('metric-modal-body');
+  if(!titleEl||!bodyEl) return;
+  titleEl.textContent = titles[type] || '';
+
+  var list = [];
+  for(var i=0;i<S.trainees.length;i++){
+    var tr=S.trainees[i], st=getStatus(tr);
+    if(type==='all' || st===type) list.push(tr);
+  }
+
+  if(list.length===0){
+    bodyEl.innerHTML='<div class="empty">該当するメンバーはいません</div>';
+    g('m-metric').className='overlay on';
+    return;
+  }
+
+  var h='';
+  for(var i=0;i<list.length;i++){
+    var tr=list[i];
+    var days=daysSince(tr.joinDate);
+    var doneN=getDone(tr);
+    var pct=Math.round(doneN/7*100);
+    var st=getStatus(tr);
+    var badge=st==='done'?'<span class="tag tag-g">完了</span>':st==='late'?'<span class="tag tag-r">遅延</span>':'<span class="tag tag-b">進行中</span>';
+
+    var detail='';
+    if(type==='late'){
+      // 遅延中の研修を列挙
+      var lateItems=[];
+      for(var j=0;j<TRAININGS.length;j++){
+        var t=TRAININGS[j];
+        if(getRecSt(tr.id,t.id)!=='done' && days>t.deadline){
+          var over=days-t.deadline;
+          lateItems.push(esc(t.name)+' ('+over+'日超過)');
+        }
+      }
+      detail='<div style="font-size:11px;color:#dc2626;margin-top:4px">'+lateItems.join('、')+'</div>';
+    } else if(type==='inprogress'){
+      // 次に受講すべき研修
+      var next=null;
+      for(var j=0;j<TRAININGS.length;j++){
+        if(getRecSt(tr.id,TRAININGS[j].id)!=='done'){ next=TRAININGS[j]; break; }
+      }
+      detail=next?'<div style="font-size:11px;color:#2563eb;margin-top:4px">次：'+esc(next.name)+'</div>':'';
+    }
+
+    // 完了率バー
+    var bar='<div style="display:flex;align-items:center;gap:6px;margin-top:4px">'+
+      '<div style="flex:1;height:5px;background:#e0e0e0;border-radius:99px;overflow:hidden">'+
+        '<div style="width:'+pct+'%;height:5px;background:'+(st==='done'?'#1a6b3a':st==='late'?'#dc2626':'#2563eb')+';border-radius:99px"></div>'+
+      '</div>'+
+      '<span style="font-size:10px;color:#888;white-space:nowrap">'+doneN+'/7</span>'+
+    '</div>';
+
+    h+='<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0" onclick="openDetailFromMetric('+tr.id+')" style="cursor:pointer">'+
+      '<div style="width:36px;height:36px;border-radius:50%;background:#e8f5ee;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#1a6b3a;flex-shrink:0">'+esc(tr.name[0])+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+          '<span style="font-size:13px;font-weight:600">'+esc(tr.name)+'</span>'+
+          badge+
+        '</div>'+
+        '<div style="font-size:11px;color:#888;margin-top:2px">'+esc(tr.dept)+'｜入社'+days+'日目</div>'+
+        bar+detail+
+      '</div>'+
+    '</div>';
+  }
+  bodyEl.innerHTML='<div style="max-height:55vh;overflow-y:auto">'+h+'</div>';
+  g('m-metric').className='overlay on';
+}
+
+function openDetailFromMetric(id){
+  closeM('m-metric');
+  setTimeout(function(){ openDetail(id); },120);
+}
+
+// ================================================================
+// Render Dashboard
+// ================================================================
+function renderDash(){
+  var tot=S.trainees.length;
+  var alertEl=g('dash-alert'), metricsEl=g('dash-metrics'), progEl=g('dash-prog'), schEl=g('dash-sch');
+
+  if(!metricsEl) return;
+
+  if(tot===0){
+    metricsEl.innerHTML='<div class="metric"><div class="metric-lbl">受講者未登録</div><div class="metric-val">0</div></div>';
+    if(alertEl) alertEl.innerHTML='';
+    if(progEl) progEl.innerHTML='';
+    if(schEl) schEl.innerHTML='<div class="empty">予定なし</div>';
+    return;
+  }
+
+  var done=0,late=0,prog=0;
+  for(var i=0;i<S.trainees.length;i++){
+    var st=getStatus(S.trainees[i]);
+    if(st==='done') done++;
+    else if(st==='late') late++;
+    else prog++;
+  }
+
+  if(alertEl) alertEl.innerHTML=late>0?'<div class="alert-bar">&#9888; 遅延アラート：'+late+'名が期限超過の研修があります</div>':'';
+
+  metricsEl.innerHTML=
+    '<div class="metric" onclick="openMetricModal(\'all\')"><div class="metric-lbl">受講者総数</div><div class="metric-val">'+tot+'</div><div class="metric-sub">名 &#8250;</div></div>'+
+    '<div class="metric" onclick="openMetricModal(\'done\')"><div class="metric-lbl">全研修完了</div><div class="metric-val" style="color:#1a6b3a">'+done+'</div><div class="metric-sub">名 ('+Math.round(done/tot*100)+'%) &#8250;</div></div>'+
+    '<div class="metric" onclick="openMetricModal(\'inprogress\')"><div class="metric-lbl">進行中</div><div class="metric-val" style="color:#2563eb">'+prog+'</div><div class="metric-sub">名 &#8250;</div></div>'+
+    '<div class="metric" onclick="openMetricModal(\'late\')"><div class="metric-lbl">遅延あり</div><div class="metric-val" style="color:#dc2626">'+late+'</div><div class="metric-sub">名 &#8250;</div></div>';
+
+  if(progEl){
+    var ph='';
+    for(var i=0;i<TRAININGS.length;i++){
+      var t=TRAININGS[i], n=0;
+      for(var j=0;j<S.trainees.length;j++){ if(getRecSt(S.trainees[j].id,t.id)==='done') n++; }
+      var pct=tot?Math.round(n/tot*100):0;
+      ph+='<div class="pg-row"><div class="pg-lbl" title="'+esc(t.name)+'">'+esc(t.name)+'</div><div class="pg-bar"><div class="pg-fill" style="width:'+pct+'%"></div></div><div class="pg-pct">'+pct+'%</div></div>';
+    }
+    progEl.innerHTML=ph;
+  }
+
+  if(schEl){
+    var upcoming=[];
+    for(var i=0;i<S.schedules.length;i++){ if(new Date(S.schedules[i].date)>=TODAY) upcoming.push(S.schedules[i]); }
+    upcoming.sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+    upcoming=upcoming.slice(0,4);
+    if(upcoming.length===0){ schEl.innerHTML='<div class="empty">予定なし</div>'; }
+    else{
+      var sh='';
+      for(var i=0;i<upcoming.length;i++){
+        var s=upcoming[i], t=null;
+        for(var j=0;j<TRAININGS.length;j++){ if(TRAININGS[j].id==s.rid){ t=TRAININGS[j]; break; } }
+        var d=new Date(s.date);
+        sh+='<div class="sch-item"><div class="sch-date"><div class="sch-day">'+d.getDate()+'</div><div class="sch-mon">'+MOS[d.getMonth()]+'</div></div>'+
+          '<div style="flex:1"><div class="sch-nm">'+esc(t?t.name:'')+'</div><div class="sch-dt">'+esc(s.lec)+'｜'+esc(s.loc)+'</div></div>'+
+          '<span class="tag tag-g">'+s.att+'名</span></div>';
+      }
+      schEl.innerHTML=sh;
+    }
+  }
+}
+
+// ================================================================
+// Render Trainees
+// ================================================================
+function renderTrainees(){
+  var tbody=g('trainee-tbody'); if(!tbody) return;
+  var list=[];
+  for(var i=0;i<S.trainees.length;i++){
+    var tr=S.trainees[i], st=getStatus(tr);
+    if(S.filter==='late'&&st!=='late') continue;
+    if(S.filter==='inprogress'&&st!=='inprogress') continue;
+    if(S.filter==='done'&&st!=='done') continue;
+    list.push(tr);
+  }
+  if(list.length===0){ tbody.innerHTML='<tr><td colspan="6" class="empty">該当する受講者はいません</td></tr>'; return; }
+
+  var h='';
+  for(var i=0;i<list.length;i++){
+    var tr=list[i];
+    var days=daysSince(tr.joinDate);
+    var doneN=getDone(tr);
+    var pct=Math.round(doneN/7*100);
+    var st=getStatus(tr);
+    var badge=st==='done'?'<span class="tag tag-g">&#10003; 完了</span>':st==='late'?'<span class="tag tag-r">&#9888; 遅延</span>':'<span class="tag tag-b">進行中</span>';
+    var r=16, circ=2*Math.PI*r, arc=circ*pct/100;
+    var sc=st==='done'?'#1a6b3a':st==='late'?'#dc2626':'#2563eb';
+    var donut='<svg width="44" height="44" viewBox="0 0 44 44" onclick="openDetail('+tr.id+')" style="cursor:pointer">'+
+      '<circle cx="22" cy="22" r="'+r+'" fill="none" stroke="#e0e0e0" stroke-width="5"/>'+
+      '<circle cx="22" cy="22" r="'+r+'" fill="none" stroke="'+sc+'" stroke-width="5" stroke-dasharray="'+arc.toFixed(1)+' '+(circ-arc).toFixed(1)+'" stroke-dashoffset="'+(circ*0.25).toFixed(1)+'" stroke-linecap="round"/>'+
+      '<text x="22" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="'+sc+'">'+doneN+'/7</text>'+
+      '<text x="22" y="30" text-anchor="middle" font-size="9" fill="#888">'+pct+'%</text></svg>';
+    h+='<tr>'+
+      '<td style="padding-left:12px"><div class="nm">'+esc(tr.name)+'</div><div class="nm-sub">'+esc(tr.dept)+'｜'+esc(tr.type)+'</div></td>'+
+      '<td class="col-pc" style="font-size:11px;color:#888;white-space:nowrap">'+esc(tr.joinDate)+'</td>'+
+      '<td class="col-pc" style="font-size:11px;color:#888;white-space:nowrap">'+days+'日</td>'+
+      '<td style="text-align:center">'+donut+'</td>'+
+      '<td>'+badge+'</td>'+
+      '<td><button class="btn-icon" onclick="openDetail('+tr.id+')">詳細</button></td>'+
+      '</tr>';
+  }
+  tbody.innerHTML=h;
+}
+
+function setFilter(f, btn){
+  S.filter=f;
+  var btns=document.querySelectorAll('.on-filter');
+  for(var i=0;i<btns.length;i++) btns[i].className='btn-sm';
+  if(btn) btn.className='btn-sm on-filter';
+  renderTrainees();
+}
+
+// ================================================================
+// Render Schedule
+// ================================================================
+function renderSchedule(){
+  var el=g('sch-list'); if(!el) return;
+  if(S.schedules.length===0){ el.innerHTML='<div class="empty">スケジュールはありません</div>'; return; }
+  var sorted=S.schedules.slice().sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+  var h='';
+  for(var i=0;i<sorted.length;i++){
+    var s=sorted[i], t=null;
+    for(var j=0;j<TRAININGS.length;j++){ if(TRAININGS[j].id==s.rid){ t=TRAININGS[j]; break; } }
+    var d=new Date(s.date), past=d<TODAY;
+    h+='<div class="sch-item" style="'+(past?'opacity:.5':'')+'">'+
+      '<div class="sch-date"><div class="sch-day">'+d.getDate()+'</div><div class="sch-mon">'+MOS_JP[d.getMonth()]+'</div></div>'+
+      '<div style="flex:1"><div class="sch-nm">'+esc(t?t.name:'')+(past?' <span style="font-size:10px;color:#888">(実施済)</span>':'')+'</div><div class="sch-dt">'+esc(s.lec)+'　'+esc(s.loc)+'</div></div>'+
+      '<span class="tag tag-g">'+s.att+'名</span></div>';
+  }
+  el.innerHTML=h;
+}
+
+// ================================================================
+// Render Master
+// ================================================================
+var openPrevId=null, ytOpen=false;
+
+function ytIdFrom(url){
+  if(!url) return '';
+  var m=url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+  return m?m[1]:'';
+}
+
+function renderMaster(){
+  var el=g('master-list'); if(!el) return;
+  var tot=S.trainees.length;
+  var ytId=ytIdFrom(S.ytUrl);
+
+  var ytBtn=ytId?'<button class="btn-sm green" onclick="toggleYt()">&#9654; 動画を見る</button>':'<button class="btn-sm gray">動画未設定</button>';
+  var ytReg='<button class="btn-sm adm" onclick="openYtM()">&#9881; '+(ytId?'URL変更':'URL登録')+'</button>';
+  var ytInner=ytId?'<div style="position:relative;padding-bottom:56.25%;height:0"><iframe src="https://www.youtube.com/embed/'+ytId+'?autoplay=1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen allow="autoplay"></iframe></div>':'';
+
+  var h='<div class="yt-block">'+
+    '<div class="tr-row">'+
+    '<div class="tr-num" style="background:#dc2626;flex-shrink:0">&#9654;</div>'+
+    '<div class="tr-body"><div class="tr-nm">3人のレンガ職人</div><div class="tr-sub-nm">導入編 参考動画（約5分）</div></div>'+
+    '<div style="display:flex;gap:5px;flex-shrink:0;align-items:center">'+ytBtn+ytReg+'</div></div>'+
+    '<div class="yt-preview" id="yt-preview">'+ytInner+'</div></div>';
+
+  for(var i=0;i<TRAININGS.length;i++){
+    var t=TRAININGS[i], n=0;
+    for(var j=0;j<S.trainees.length;j++){ if(getRecSt(S.trainees[j].id,t.id)==='done') n++; }
+    var pct=tot?Math.round(n/tot*100):0;
+    var hasUrl=!!t.materialUrl;
+    var matBtn=hasUrl?'<button class="btn-sm green" onclick="togglePrev('+t.id+',event)">&#9654; 資料</button>':'<button class="btn-sm gray">資料なし</button>';
+    var regBtn='<button class="btn-sm adm" onclick="openMatM('+t.id+',event)">&#9881; '+(hasUrl?'URL変更':'URL登録')+'</button>';
+    var deadLbl='<span style="font-size:10px;color:#888;white-space:nowrap">入社後'+t.deadline+'日以内</span>';
+    var deadBtn='<button class="btn-sm adm" onclick="openDeadM('+t.id+',event)" style="font-size:10px;padding:3px 7px">&#9998; 期限変更</button>';
+    var contentTxt=TRAINING_TEXTS[t.id]||'';
+    var matRowBtn=hasUrl?'<button class="btn-sm green" onclick="togglePrev('+t.id+',event)">&#9654; 資料</button>':'';
+    h+='<div class="tr-item" id="tri-'+t.id+'">'+
+      '<div class="tr-row">'+
+        '<div class="tr-num" style="flex-shrink:0">'+t.id+'</div>'+
+        '<div class="tr-body" style="min-width:0">'+
+          '<div class="tr-nm">'+esc(t.name)+'</div>'+
+          '<div style="font-size:10px;color:#888;margin-top:2px;white-space:nowrap">'+esc(t.sub)+'・入社後'+t.deadline+'日</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px">'+
+          '<div>'+
+            '<div style="width:60px;height:5px;background:#e0e0e0;border-radius:99px;overflow:hidden;margin-bottom:2px">'+
+              '<div style="width:'+pct+'%;height:5px;background:#1a6b3a;border-radius:99px"></div>'+
+            '</div>'+
+            '<div style="font-size:10px;color:#888;text-align:right">'+n+'/'+tot+'</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center">'+
+            '<button class="btn-expand" id="exp-btn-'+t.id+'" onclick="toggleContent('+t.id+')">内容<i class="chevron">&#8964;</i></button>'+
+            matRowBtn+
+            '<button class="btn-sm adm" onclick="openMatM('+t.id+',event)">URL</button>'+
+            '<button class="btn-sm adm" onclick="openDeadM('+t.id+',event)">期限</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="tr-content-panel" id="tc-'+t.id+'">'+
+        '<div style="font-size:10px;color:#888;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between">'+
+          '<span>研修内容</span>'+
+          '<span style="font-size:10px;color:#1a6b3a;background:#e8f5ee;padding:2px 7px;border-radius:99px">&#9998; 編集可能</span>'+
+        '</div>'+
+        '<textarea class="tr-content-ta" id="tctxt-'+t.id+'">'+escAttr(contentTxt)+'</textarea>'+
+        '<div style="display:flex;justify-content:flex-end;margin-top:6px">'+
+          '<button class="btn-save-txt" onclick="saveContentText('+t.id+')">&#10003; 保存</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="tr-preview" id="trp-'+t.id+'"><div style="padding:8px;color:#888;font-size:12px">読み込み中...</div></div>'+
+      '</div>';
+  }
+  el.innerHTML=h;
+}
+
+function toggleYt(){
+  var p=g('yt-preview'); if(!p) return;
+  ytOpen=!ytOpen;
+  p.className='yt-preview'+(ytOpen?' on':'');
+}
+function openYtM(){
+  var e=g('yt-url'); if(e) e.value=S.ytUrl||'';
+  g('m-yt').className='overlay on';
+}
+function saveYt(){
+  var url=g('yt-url')?g('yt-url').value.trim():'';
+  S.ytUrl=url; LS.set('sk_yt',url);
+  closeM('m-yt'); ytOpen=false; renderMaster(); toast('動画URLを保存しました');
+}
+function deleteYt(){
+  S.ytUrl=''; LS.set('sk_yt','');
+  closeM('m-yt'); ytOpen=false; renderMaster(); toast('URLを削除しました');
+}
+
+function toDrivePrev(url){
+  if(!url) return '';
+  var m=url.match(/\/d\/([a-zA-Z0-9_-]{20,})/);
+  return m?'https://drive.google.com/file/d/'+m[1]+'/preview':url;
+}
+function togglePrev(id, e){
+  if(e) e.stopPropagation();
+  var t=null; for(var i=0;i<TRAININGS.length;i++){ if(TRAININGS[i].id===id){ t=TRAININGS[i]; break; } }
+  if(!t||!t.materialUrl) return;
+  var p=g('trp-'+id), item=g('tri-'+id);
+  var isOpen=p&&p.classList.contains('on');
+  if(openPrevId&&openPrevId!==id){
+    var pp=g('trp-'+openPrevId), pi=g('tri-'+openPrevId);
+    if(pp) pp.className='tr-preview';
+    if(pi) pi.className='tr-item';
+  }
+  if(isOpen){ if(p) p.className='tr-preview'; if(item) item.className='tr-item'; openPrevId=null; }
+  else{
+    if(p){ p.innerHTML='<iframe src="'+toDrivePrev(t.materialUrl)+'" style="width:100%;height:480px;border:none;display:block" allowfullscreen></iframe>'; p.className='tr-preview on'; }
+    if(item) item.className='tr-item open';
+    openPrevId=id;
+  }
+}
+function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function toggleContent(id){
+  var panel=g('tc-'+id);
+  var btn=g('exp-btn-'+id);
+  if(!panel||!btn) return;
+  var isOpen=panel.classList.contains('on');
+  panel.className='tr-content-panel'+(isOpen?'':' on');
+  btn.className='btn-expand'+(isOpen?'':' on');
+}
+
+function saveContentText(id){
+  var ta=g('tctxt-'+id);
+  if(!ta) return;
+  TRAINING_TEXTS[id]=ta.value;
+  try{
+    var stored=JSON.parse(LS.get('sk_txts','{}'));
+    stored[id]=ta.value;
+    LS.set('sk_txts',JSON.stringify(stored));
+  }catch(e){}
+  toast('研修内容を保存しました');
+}
+
+var curDeadId=null;
+function openDeadM(id, e){
+  if(e) e.stopPropagation();
+  curDeadId=id;
+  var t=null; for(var i=0;i<TRAININGS.length;i++){ if(TRAININGS[i].id===id){ t=TRAININGS[i]; break; } }
+  if(!t) return;
+  var nm=g('dead-nm'), cur=g('dead-cur'), val=g('dead-val');
+  if(nm) nm.textContent=t.id+'. '+t.name;
+  if(cur) cur.textContent=t.deadline;
+  if(val) val.value=t.deadline;
+  g('m-deadline').className='overlay on';
+}
+function saveDeadline(){
+  var val=parseInt(g('dead-val')?g('dead-val').value:'');
+  if(!val||val<1||val>365){ toast('1〜365の数値を入力してください',true); return; }
+  var t=null; for(var i=0;i<TRAININGS.length;i++){ if(TRAININGS[i].id===curDeadId){ t=TRAININGS[i]; break; } }
+  if(!t) return;
+  t.deadline=val;
+  saveDeadlines();
+  closeM('m-deadline');
+  renderMaster();
+  renderDash();
+  renderTrainees();
+  toast('期限を入社後'+val+'日以内に変更しました');
+}
+
+var curMatId=null;
+function openMatM(id, e){
+  if(e) e.stopPropagation();
+  curMatId=id;
+  var t=null; for(var i=0;i<TRAININGS.length;i++){ if(TRAININGS[i].id===id){ t=TRAININGS[i]; break; } }
+  if(!t) return;
+  var nm=g('mat-nm'), url=g('mat-url'), del=g('mat-del');
+  if(nm) nm.textContent=t.id+'. '+t.name;
+  if(url) url.value=t.materialUrl||'';
+  if(del) del.style.display=t.materialUrl?'block':'none';
+  g('m-material').className='overlay on';
+}
+function saveMat(){
+  var url=g('mat-url')?g('mat-url').value.trim():'';
+  var t=null; for(var i=0;i<TRAININGS.length;i++){ if(TRAININGS[i].id===curMatId){ t=TRAININGS[i]; break; } }
+  if(!t) return;
+  t.materialUrl=url; saveMats(); closeM('m-material'); renderMaster();
+  toast(url?'資料URLを保存しました':'URLを削除しました');
+  if(GAS_URL) apiPost({action:'updateTrainingMaterial',trainingId:curMatId,materialUrl:url});
+}
+function deleteMat(){
+  var t=null; for(var i=0;i<TRAININGS.length;i++){ if(TRAININGS[i].id===curMatId){ t=TRAININGS[i]; break; } }
+  if(!t) return;
+  t.materialUrl=''; saveMats(); closeM('m-material'); renderMaster(); toast('URLを削除しました');
+}
+
+// ================================================================
+// Render Interviewers
+// ================================================================
+function renderItvw(){
+  var card=g('itvw-card'); if(!card) return;
+  if(S.interviewers.length===0){
+    card.innerHTML='<div class="empty">面談者が登録されていません。「+ 面談者追加」から登録してください。</div>';
+    return;
+  }
+  var h='<table class="tbl"><thead><tr><th style="padding-left:12px">氏名</th><th>役職</th><th>担当受講者</th><th>メモ</th><th></th></tr></thead><tbody>';
+  for(var i=0;i<S.interviewers.length;i++){
+    var iv=S.interviewers[i], assigned=[];
+    for(var j=0;j<S.trainees.length;j++){ if(S.trainees[j].itvwId==iv.id) assigned.push(S.trainees[j]); }
+    var nms=assigned.slice(0,3).map(function(t){ return esc(t.name); }).join('・')+(assigned.length>3?'…':'');
+    h+='<tr>'+
+      '<td style="padding-left:12px"><div class="nm">'+esc(iv.name)+'</div></td>'+
+      '<td style="font-size:11px;color:#888">'+esc(iv.role||'—')+'</td>'+
+      '<td style="font-size:11px"><span style="font-weight:700;color:#1a6b3a">'+assigned.length+'</span>名'+(assigned.length?'<br><span style="color:#888;font-size:10px">'+nms+'</span>':'')+'</td>'+
+      '<td style="font-size:11px;color:#888;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(iv.note||'—')+'</td>'+
+      '<td><button class="btn-icon adm" onclick="openEditItvw('+iv.id+')">編集</button></td>'+
+      '</tr>';
+  }
+  h+='</tbody></table>';
+  card.innerHTML=h;
+}
+
+function openAddInterviewer(){
+  g('itvw-title').textContent='面談者を追加';
+  g('itvw-id').value='';
+  ['itvw-nm','itvw-role','itvw-note'].forEach(function(f){ var e=g(f); if(e) e.value=''; });
+  g('itvw-del').style.display='none';
+  g('m-itvw').className='overlay on';
+}
+function openEditItvw(id){
+  var iv=null; for(var i=0;i<S.interviewers.length;i++){ if(S.interviewers[i].id===id){ iv=S.interviewers[i]; break; } }
+  if(!iv) return;
+  g('itvw-title').textContent='面談者を編集';
+  g('itvw-id').value=id;
+  g('itvw-nm').value=iv.name;
+  g('itvw-role').value=iv.role||'';
+  g('itvw-note').value=iv.note||'';
+  g('itvw-del').style.display='block';
+  g('m-itvw').className='overlay on';
+}
+function saveItvw(){
+  var name=g('itvw-nm')?g('itvw-nm').value.trim():'';
+  if(!name){ toast('氏名は必須です',true); return; }
+  var role=g('itvw-role')?g('itvw-role').value.trim():'';
+  var note=g('itvw-note')?g('itvw-note').value.trim():'';
+  var editId=parseInt(g('itvw-id')?g('itvw-id').value:'');
+  if(editId){
+    for(var i=0;i<S.interviewers.length;i++){ if(S.interviewers[i].id===editId){ S.interviewers[i].name=name; S.interviewers[i].role=role; S.interviewers[i].note=note; break; } }
+  } else {
+    var nid=S.interviewers.length?Math.max.apply(null,S.interviewers.map(function(x){ return x.id; }))+1:1;
+    S.interviewers.push({id:nid,name:name,role:role,note:note});
+  }
+  saveItvws(); closeM('m-itvw'); renderItvw();
+  toast(editId?'更新しました':name+' を追加しました');
+}
+function deleteItvw(){
+  var editId=parseInt(g('itvw-id')?g('itvw-id').value:'');
+  if(!editId||!confirm('この面談者を削除しますか？')) return;
+  S.interviewers=S.interviewers.filter(function(x){ return x.id!==editId; });
+  for(var i=0;i<S.trainees.length;i++){ if(S.trainees[i].itvwId===editId) delete S.trainees[i].itvwId; }
+  saveItvws(); saveAsgn(); closeM('m-itvw'); renderItvw(); toast('削除しました');
+}
+function assignItvw(tid, val){
+  for(var i=0;i<S.trainees.length;i++){
+    if(S.trainees[i].id==tid){ S.trainees[i].itvwId=val?parseInt(val):undefined; break; }
+  }
+  saveAsgn(); renderItvw(); toast('担当面談者を設定しました');
+}
+
+// ================================================================
+// Detail Modal
+// ================================================================
+function openDetail(id){
+  var tr=null; for(var i=0;i<S.trainees.length;i++){ if(S.trainees[i].id==id){ tr=S.trainees[i]; break; } }
+  if(!tr) return;
+  var days=daysSince(tr.joinDate), doneN=getDone(tr), st=getStatus(tr);
+  var stColor=st==='done'?'#1a6b3a':st==='late'?'#dc2626':'#2563eb';
+  var stLbl=st==='done'?'全研修完了':st==='late'?'遅延あり':'進行中';
+
+  var checks='';
+  for(var i=0;i<TRAININGS.length;i++){
+    var t=TRAININGS[i], r=getRec(tr.id,t.id), rs=r?r.st:'pending';
+    var isLate=rs!=='done'&&days>t.deadline;
+    var cls=rs==='done'?'done':isLate?'late':'';
+    var icls=rs==='done'?'ci-done':isLate?'ci-late':rs==='progress'?'ci-prog':'ci-pend';
+    var ilbl=rs==='done'?'&#10003;':isLate?'!':rs==='progress'?'&#9654;':'';
+    var dlbl=rs==='done'?'完了'+(r&&r.dt?' ('+r.dt+')':''):isLate?'期限超過':rs==='progress'?'進行中':'未実施';
+    checks+='<div class="check-item '+cls+'" onclick="toggleSt('+tr.id+','+t.id+')"><div class="ci-icon '+icls+'">'+ilbl+'</div><div><div style="font-size:12px;font-weight:600">'+esc(t.name)+'</div><div style="font-size:10px;color:#888">'+dlbl+'</div></div></div>';
+  }
+
+  var doneRecs=[];
+  for(var i=0;i<TRAININGS.length;i++){
+    var t=TRAININGS[i], r=getRec(tr.id,t.id);
+    if(r&&r.st==='done') doneRecs.push({name:t.name,dt:r.dt,id:t.id});
+  }
+  doneRecs.sort(function(a,b){ return (a.dt||'').localeCompare(b.dt||''); });
+  var timelineH='';
+  if(doneRecs.length===0){
+    timelineH='<div style="font-size:12px;color:#aaa;padding:6px 0">完了した研修はまだありません</div>';
+  } else {
+    for(var i=0;i<doneRecs.length;i++){
+      var dr=doneRecs[i], isLast=(i===doneRecs.length-1);
+      timelineH+='<div style="display:flex;gap:10px;align-items:flex-start">'+
+        '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">'+
+          '<div style="width:10px;height:10px;border-radius:50%;background:#1a6b3a;margin-top:3px"></div>'+
+          (isLast?'':'<div style="width:2px;flex:1;background:#e0e0e0;margin-top:3px;min-height:20px"></div>')+
+        '</div>'+
+        '<div style="padding-bottom:'+(isLast?'0':'10')+'px">'+
+          '<div style="font-size:12px;font-weight:600;color:#1a1a1a">'+esc(dr.name)+'</div>'+
+          '<div style="font-size:10px;color:#888">'+esc(dr.dt||'日付なし')+'</div>'+
+        '</div></div>';
+    }
+  }
+
+  var itvwOpts='<option value="">未設定</option>';
+  for(var i=0;i<S.interviewers.length;i++){
+    var iv=S.interviewers[i];
+    itvwOpts+='<option value="'+iv.id+'"'+(tr.itvwId==iv.id?' selected':'')+'>'+esc(iv.name)+(iv.role?' ('+esc(iv.role)+')':'')+'</option>';
+  }
+
+  var recs=S.iRecs&&S.iRecs[tr.id]?S.iRecs[tr.id]:[];
+  var recsH='';
+  if(recs.length===0){
+    recsH='<div style="font-size:12px;color:#aaa;padding:8px 0">面談記録はまだありません</div>';
+  } else {
+    for(var i=0;i<recs.length;i++){
+      var rec=recs[i];
+      recsH+='<div style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:8px;border-left:3px solid #1a6b3a">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+          '<div style="font-size:11px;font-weight:700;color:#1a6b3a">'+esc(rec.date)+(rec.itvwName?' | '+esc(rec.itvwName):'')+'</div>'+
+          '<button onclick="deleteIRec('+tr.id+','+rec.id+')" style="background:none;border:none;color:#ccc;font-size:14px;cursor:pointer;padding:0 2px">&#10005;</button>'+
+        '</div>'+
+        '<div style="font-size:12px;color:#333;line-height:1.6;white-space:pre-wrap">'+esc(rec.content)+'</div>'+
+        (rec.next?'<div style="margin-top:6px;font-size:11px;color:#2563eb;background:#eff6ff;padding:4px 8px;border-radius:4px">&#9654; 次回: '+esc(rec.next)+'</div>':'')+
+      '</div>';
+    }
+  }
+
+  var today=new Date().toISOString().slice(0,10);
+  var h=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<div style="width:40px;height:40px;border-radius:50%;background:#e8f5ee;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#1a6b3a">'+esc(tr.name[0])+'</div>'+
+        '<div><div style="font-size:15px;font-weight:700">'+esc(tr.name)+'</div><div style="font-size:11px;color:#888">'+esc(tr.dept)+'｜入社 '+esc(tr.joinDate)+'（'+days+'日目）</div></div>'+
+      '</div><span style="font-size:12px;font-weight:700;color:'+stColor+'">'+stLbl+'</span>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
+      '<div class="metric" style="cursor:default"><div class="metric-lbl">完了研修</div><div class="metric-val" style="font-size:18px;color:#1a6b3a">'+doneN+'/7</div></div>'+
+      '<div class="metric" style="cursor:default"><div class="metric-lbl">達成率</div><div class="metric-val" style="font-size:18px">'+Math.round(doneN/7*100)+'%</div></div>'+
+      '<div class="metric" style="cursor:default"><div class="metric-lbl">残り</div><div class="metric-val" style="font-size:18px;color:'+(st==='late'?'#dc2626':'#1a1a1a')+'">'+(7-doneN)+'</div></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #e0e0e0">'+
+      '<button id="dtab-check" onclick="switchDetailTab('+id+',0)" style="padding:7px 12px;border:none;background:none;font-size:12px;font-weight:700;color:#1a6b3a;border-bottom:2px solid #1a6b3a;cursor:pointer">研修状況</button>'+
+      '<button id="dtab-timeline" onclick="switchDetailTab('+id+',1)" style="padding:7px 12px;border:none;background:none;font-size:12px;color:#888;border-bottom:2px solid transparent;cursor:pointer">完了ログ</button>'+
+      '<button id="dtab-irec" onclick="switchDetailTab('+id+',2)" style="padding:7px 12px;border:none;background:none;font-size:12px;color:#888;border-bottom:2px solid transparent;cursor:pointer">面談記録('+recs.length+')</button>'+
+    '</div>'+
+    '<div id="dpanel-check">'+
+      '<div style="font-size:11px;color:#888;margin-bottom:6px">タップで完了&#8644;未完了を切り替え</div>'+
+      '<div class="check-grid">'+checks+'</div>'+
+    '</div>'+
+    '<div id="dpanel-timeline" style="display:none">'+
+      '<div style="font-size:11px;color:#888;margin-bottom:8px">研修完了の記録</div>'+
+      timelineH+
+    '</div>'+
+    '<div id="dpanel-irec" style="display:none">'+
+      '<div style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:10px;border:1px solid #e0e0e0">'+
+        '<div style="font-size:11px;font-weight:700;color:#1a6b3a;margin-bottom:8px">+ 面談記録を追加</div>'+
+        '<div style="margin-bottom:6px"><label style="font-size:10px;color:#888;display:block;margin-bottom:2px">面談日</label>'+
+          '<input type="date" id="irec-date" value="'+today+'" style="width:140px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px"></div>'+
+        '<div style="margin-bottom:6px"><label style="font-size:10px;color:#888;display:block;margin-bottom:2px">面談内容</label>'+
+          '<textarea id="irec-content" style="width:100%;padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px;resize:vertical;min-height:70px;font-family:inherit" placeholder="面談で話した内容..."></textarea></div>'+
+        '<div style="margin-bottom:8px"><label style="font-size:10px;color:#888;display:block;margin-bottom:2px">次回アクション（任意）</label>'+
+          '<input type="text" id="irec-next" style="width:100%;padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px" placeholder="例：来週までに挨拶編を完了"></div>'+
+        '<div style="text-align:right">'+
+          '<button onclick="submitIRec('+id+')" style="background:#1a6b3a;color:#fff;border:none;padding:6px 14px;border-radius:99px;font-size:12px;cursor:pointer">保存する</button>'+
+        '</div>'+
+      '</div>'+
+      recsH+
+    '</div>'+
+    '<div style="margin-top:12px"><label class="note-lbl">担当面談者</label>'+
+      '<select onchange="assignItvw('+tr.id+',this.value)" style="width:100%">'+itvwOpts+'</select></div>'+
+    '<div style="display:flex;justify-content:space-between;margin-top:12px">'+
+      '<button class="btn-danger adm" style="font-size:12px;padding:6px 12px" onclick="delTrainee('+tr.id+')">削除</button>'+
+      '<button class="btn-cancel" onclick="closeM(\'m-detail\')">閉じる</button>'+
+    '</div>';
+
+  var inner=g('detail-inner'); if(inner) inner.innerHTML=h;
+  g('m-detail').className='overlay on';
+}
+
+
+function switchDetailTab(tid, idx){
+  var panels=['check','timeline','irec'];
+  for(var i=0;i<panels.length;i++){
+    var p=g('dpanel-'+panels[i]), b=g('dtab-'+panels[i]);
+    if(!p||!b) continue;
+    var on=(i===idx);
+    p.style.display=on?'block':'none';
+    b.style.color=on?'#1a6b3a':'#888';
+    b.style.fontWeight=on?'700':'400';
+    b.style.borderBottom=on?'2px solid #1a6b3a':'2px solid transparent';
+  }
+}
+
+function submitIRec(tid){
+  var date=g('irec-date')?g('irec-date').value:'';
+  var content=g('irec-content')?g('irec-content').value.trim():'';
+  var next=g('irec-next')?g('irec-next').value.trim():'';
+  if(!date||!content){ toast('面談日と内容は必須です',true); return; }
+  addInterviewRecord(tid, date, content, next);
+  openDetail(tid);
+  switchDetailTab(tid,2);
+  toast('面談記録を保存しました');
+}
+
+function deleteIRec(tid, recId){
+  if(!confirm('この面談記録を削除しますか？')) return;
+  deleteInterviewRecord(tid, recId);
+  openDetail(tid);
+  switchDetailTab(tid,2);
+  toast('削除しました');
+}
+function toggleSt(tid, rid){
+  var cur=getRecSt(tid,rid), nst=cur==='done'?'pending':'done';
+  var found=false;
+  for(var i=0;i<S.records.length;i++){
+    if(S.records[i].tid==tid&&S.records[i].rid==rid){
+      S.records[i].st=nst;
+      if(nst==='done') S.records[i].dt=new Date().toISOString().slice(0,10);
+      found=true; break;
+    }
+  }
+  if(!found) S.records.push({tid:tid,rid:rid,st:nst,dt:nst==='done'?new Date().toISOString().slice(0,10):''});
+  openDetail(tid);
+  renderDash(); renderTrainees(); renderMaster();
+  if(GAS_URL) apiPost({action:'updateRecord',traineeId:tid,trainingId:rid,status:nst,doneDate:nst==='done'?new Date().toISOString().slice(0,10):''}).then(function(r){ if(r&&r.success) toast('保存しました'); });
+}
+
+function saveNote(id, note){
+  for(var i=0;i<S.trainees.length;i++){ if(S.trainees[i].id==id){ S.trainees[i].note=note; break; } }
+  if(GAS_URL) apiPost({action:'updateTraineeNote',id:id,note:note});
+}
+
+function delTrainee(id){
+  if(!confirm('この受講者を削除しますか？')) return;
+  S.trainees=S.trainees.filter(function(t){ return t.id!=id; });
+  S.records=S.records.filter(function(r){ return r.tid!=id; });
+  closeM('m-detail'); renderAll();
+  if(GAS_URL) apiPost({action:'deleteTrainee',id:id}).then(function(r){ if(r&&r.success) toast('削除しました'); });
+}
+
+// ================================================================
+// Add Trainee / Schedule
+// ================================================================
+function openAddTrainee(){
+  ['f-name','f-dept','f-note'].forEach(function(f){ var e=g(f); if(e) e.value=''; });
+  var d=g('f-join'); if(d) d.value=new Date().toISOString().slice(0,10);
+  g('m-trainee').className='overlay on';
+}
+function saveTrainee(){
+  var name=g('f-name')?g('f-name').value.trim():'';
+  var joinDate=g('f-join')?g('f-join').value:'';
+  if(!name||!joinDate){ toast('氏名と入社日は必須です',true); return; }
+  var dept=(g('f-dept')?g('f-dept').value.trim():'')||'ユニット2';
+  var type=g('f-type')?g('f-type').value:'中途';
+  var note=g('f-note')?g('f-note').value.trim():'';
+  var nid=S.trainees.length?Math.max.apply(null,S.trainees.map(function(t){ return t.id; }))+1:1;
+  S.trainees.push({id:nid,name:name,joinDate:joinDate,dept:dept,type:type,note:note});
+  for(var i=0;i<TRAININGS.length;i++) S.records.push({tid:nid,rid:TRAININGS[i].id,st:'pending',dt:''});
+  closeM('m-trainee'); renderAll(); toast(name+' を追加しました');
+  if(GAS_URL) apiPost({action:'addTrainee',name:name,joinDate:joinDate,dept:dept,type:type,note:note});
+}
+
+function openAddSchedule(){
+  var sel=g('s-tr');
+  if(sel){ sel.innerHTML='<option value="">研修を選択</option>'; for(var i=0;i<TRAININGS.length;i++) sel.innerHTML+='<option value="'+TRAININGS[i].id+'">'+esc(TRAININGS[i].name)+'</option>'; }
+  var d=g('s-date'); if(d) d.value=new Date().toISOString().slice(0,10);
+  ['s-lec','s-loc'].forEach(function(f){ var e=g(f); if(e) e.value=''; });
+  var a=g('s-att'); if(a) a.value='5';
+  g('m-schedule').className='overlay on';
+}
+function saveSchedule(){
+  var rid=parseInt(g('s-tr')?g('s-tr').value:'');
+  var date=g('s-date')?g('s-date').value:'';
+  if(!rid||!date){ toast('研修と日付は必須です',true); return; }
+  var lec=(g('s-lec')?g('s-lec').value.trim():'')||'未定';
+  var loc=(g('s-loc')?g('s-loc').value.trim():'')||'研修室A';
+  var att=parseInt(g('s-att')?g('s-att').value:'0')||0;
+  var nid=S.schedules.length?Math.max.apply(null,S.schedules.map(function(s){ return s.id; }))+1:1;
+  S.schedules.push({id:nid,rid:rid,date:date,lec:lec,loc:loc,att:att});
+  closeM('m-schedule'); renderSchedule(); renderDash(); toast('スケジュールを追加しました');
+  if(GAS_URL) apiPost({action:'addSchedule',trainingId:rid,date:date,lecturer:lec,location:loc,attendees:att});
+}
+
+// ================================================================
+// Modal utils
+// ================================================================
+function closeM(id){ var m=g(id); if(m) m.className='overlay'; }
+
+document.addEventListener('click', function(e){
+  if(e.target && e.target.classList && e.target.classList.contains('overlay')) e.target.className='overlay';
+});
+
+// ================================================================
+// Admin PIN
+// ================================================================
+var ADMIN_PIN = '3150';
+var isAdmin = false;
+var pinBuffer = '';
+
+function openPin(){
+  if(isAdmin){ exitAdmin(); return; }
+  pinBuffer='';
+  updatePinDots();
+  g('pin-err').textContent='';
+  g('pin-overlay').className='pin-overlay on';
+}
+function closePin(){
+  g('pin-overlay').className='pin-overlay';
+  pinBuffer='';
+  updatePinDots();
+  g('pin-err').textContent='';
+}
+
+function pinTap(n){
+  if(pinBuffer.length>=4) return;
+  pinBuffer+=n;
+  updatePinDots();
+  if(pinBuffer.length===4){
+    setTimeout(function(){ checkPin(); },120);
+  }
+}
+function pinDel(){
+  if(pinBuffer.length===0) return;
+  pinBuffer=pinBuffer.slice(0,-1);
+  updatePinDots();
+  g('pin-err').textContent='';
+}
+function updatePinDots(){
+  for(var i=0;i<4;i++){
+    var d=g('pd'+i);
+    if(!d) continue;
+    d.className='pin-dot'+(i<pinBuffer.length?' filled':'');
+  }
+}
+function checkPin(){
+  if(pinBuffer===ADMIN_PIN){
+    isAdmin=true;
+    document.body.classList.add('admin');
+    var pill=g('admin-pill'); if(pill) pill.className='admin-pill on';
+    var editBtn=g('edit-mode-btn'); if(editBtn) editBtn.textContent='編集中';
+    closePin();
+    renderAll();
+    toast('管理者モードに切り替えました');
+  } else {
+    var dots=document.querySelectorAll('.pin-dot');
+    for(var i=0;i<dots.length;i++) dots[i].className='pin-dot filled';
+    setTimeout(function(){
+      for(var i=0;i<dots.length;i++) dots[i].className='pin-dot';
+    },400);
+    g('pin-err').textContent='パスコードが違います';
+    pinBuffer='';
+    setTimeout(function(){ updatePinDots(); },400);
+  }
+}
+function exitAdmin(){
+  isAdmin=false;
+  document.body.classList.remove('admin');
+  var pill=g('admin-pill'); if(pill) pill.className='admin-pill';
+  var editBtn=g('edit-mode-btn'); if(editBtn) editBtn.textContent='編集';
+  renderAll();
+  toast('通常モードに切り替えました');
+}
+
+// ================================================================
+// Init (DOMContentLoaded safe)
+// ================================================================
+function init(){
+  var inp=g('gas-url-input'); if(inp) inp.value=GAS_URL;
+  loadData();
+  // 30秒ごとに自動更新（複数人同時編集対応）
+  setInterval(function(){
+    if(GAS_URL){ loadData(true); }
+    else if(document.visibilityState!=='hidden'){ loadData(false); }
+  }, 30000);
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
