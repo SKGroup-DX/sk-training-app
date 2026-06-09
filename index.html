@@ -725,13 +725,36 @@ function applyData(data){
     });
     LS.set('sk_irec', JSON.stringify(S.iRecs));
   }
-  // 面談者マスタ（GAS優先、なければlocalStorage）
-  if(data.interviewers && data.interviewers.length){
-    S.interviewers = data.interviewers.map(function(iv){
-      return {id:Number(iv.id), name:iv.name||'', role:iv.role||'', note:iv.note||''};
+  // 面談者マスタ：GASとlocalStorageをマージ
+  var gasItvws = (data.interviewers||[]).map(function(iv){
+    return {id:Number(iv.id), name:iv.name||'', role:iv.role||'', note:iv.note||''};
+  });
+  var localItvws = [];
+  try{ localItvws = JSON.parse(LS.get('sk_itvw','[]'))||[]; }catch(e){}
+  if(gasItvws.length > 0){
+    // GASにないlocalStorageの面談者をマイグレーション
+    localItvws.forEach(function(lv){
+      var found = false;
+      for(var i=0;i<gasItvws.length;i++){
+        if(gasItvws[i].name === lv.name){ found=true; break; }
+      }
+      if(!found && lv.name && GAS_URL){
+        // GASに存在しない → 自動アップロード
+        apiPost({action:'addInterviewer', name:lv.name, role:lv.role||'', note:lv.note||''});
+        gasItvws.push({id:lv.id, name:lv.name, role:lv.role||'', note:lv.note||''});
+      }
     });
-    LS.set('sk_itvw', JSON.stringify(S.interviewers));
+    S.interviewers = gasItvws;
+  } else if(localItvws.length > 0){
+    // GASに面談者なし → localStorageを使い、GASにアップロード
+    S.interviewers = localItvws;
+    if(GAS_URL){
+      localItvws.forEach(function(lv){
+        if(lv.name) apiPost({action:'addInterviewer', name:lv.name, role:lv.role||'', note:lv.note||''});
+      });
+    }
   }
+  if(S.interviewers.length) LS.set('sk_itvw', JSON.stringify(S.interviewers));
   // 担当設定
   if(data.assignments && data.assignments.length){
     data.assignments.forEach(function(a){
