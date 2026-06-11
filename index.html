@@ -1120,7 +1120,7 @@ function renderMaster(){
 
   var ytBtn=ytId?'<button class="btn-sm green" onclick="toggleYt()">&#9654; 動画を見る</button>':'<button class="btn-sm gray">動画未設定</button>';
   var ytReg='<button class="btn-sm adm" onclick="openYtM()">&#9881; '+(ytId?'URL変更':'URL登録')+'</button>';
-  var ytInner=ytId?'<div style="position:relative;padding-bottom:56.25%;height:0"><iframe src="https://www.youtube.com/embed/'+ytId+'?autoplay=1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen allow="autoplay"></iframe></div>':'';
+  var ytInner=ytId?'<div style="position:relative;padding-bottom:56.25%;height:0"><iframe src="https://www.youtube.com/embed/'+ytId+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen></iframe></div>':'';
 
   var h='<div class="yt-block">'+
     '<div class="tr-row">'+
