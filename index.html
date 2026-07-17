@@ -973,7 +973,7 @@ function openMetricModal(type){
       '<div style="flex:1;height:5px;background:#e0e0e0;border-radius:99px;overflow:hidden">'+
         '<div style="width:'+pct+'%;height:5px;background:'+(st==='done'?'#1a6b3a':st==='late'?'#dc2626':'#2563eb')+';border-radius:99px"></div>'+
       '</div>'+
-      '<span style="font-size:10px;color:#888;white-space:nowrap">'+doneN+'/7</span>'+
+      '<span style="font-size:10px;color:#888;white-space:nowrap">'+doneN+'/17</span>'+
     '</div>';
 
     h+='<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0" onclick="openDetailFromMetric('+tr.id+')" style="cursor:pointer">'+
@@ -1090,7 +1090,7 @@ function renderTrainees(){
     var donut='<svg width="44" height="44" viewBox="0 0 44 44" onclick="openDetail('+tr.id+')" style="cursor:pointer">'+
       '<circle cx="22" cy="22" r="'+r+'" fill="none" stroke="#e0e0e0" stroke-width="5"/>'+
       '<circle cx="22" cy="22" r="'+r+'" fill="none" stroke="'+sc+'" stroke-width="5" stroke-dasharray="'+arc.toFixed(1)+' '+(circ-arc).toFixed(1)+'" stroke-dashoffset="'+(circ*0.25).toFixed(1)+'" stroke-linecap="round"/>'+
-      '<text x="22" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="'+sc+'">'+doneN+'/7</text>'+
+      '<text x="22" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="'+sc+'">'+doneN+'/17</text>'+
       '<text x="22" y="30" text-anchor="middle" font-size="9" fill="#888">'+pct+'%</text></svg>';
     h+='<tr>'+
       '<td style="padding-left:12px"><div class="nm">'+esc(tr.name)+'</div><div class="nm-sub">'+esc(tr.dept)+'｜'+esc(tr.type)+'</div></td>'+
@@ -1507,9 +1507,9 @@ function openDetail(id){
       '</div><span style="font-size:12px;font-weight:700;color:'+stColor+'">'+stLbl+'</span>'+
     '</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
-      '<div class="metric" style="cursor:default"><div class="metric-lbl">完了研修</div><div class="metric-val" style="font-size:18px;color:#1a6b3a">'+doneN+'/7</div></div>'+
+      '<div class="metric" style="cursor:default"><div class="metric-lbl">完了研修</div><div class="metric-val" style="font-size:18px;color:#1a6b3a">'+doneN+'/17</div></div>'+
       '<div class="metric" style="cursor:default"><div class="metric-lbl">達成率</div><div class="metric-val" style="font-size:18px">'+Math.round(doneN/17*100)+'%</div></div>'+
-      '<div class="metric" style="cursor:default"><div class="metric-lbl">残り</div><div class="metric-val" style="font-size:18px;color:'+(st==='late'?'#dc2626':'#1a1a1a')+'">'+(7-doneN)+'</div></div>'+
+      '<div class="metric" style="cursor:default"><div class="metric-lbl">残り</div><div class="metric-val" style="font-size:18px;color:'+(st==='late'?'#dc2626':'#1a1a1a')+'">'+(17-doneN)+'</div></div>'+
     '</div>'+
     '<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #e0e0e0">'+
       '<button id="dtab-check" onclick="switchDetailTab('+id+',0)" style="padding:7px 12px;border:none;background:none;font-size:12px;font-weight:700;color:#1a6b3a;border-bottom:2px solid #1a6b3a;cursor:pointer">研修状況</button>'+
