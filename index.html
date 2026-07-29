@@ -264,10 +264,7 @@ body.admin .adm-block{display:flex}
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     受講者
   </button>
-  <button class="nav-btn" onclick="showPage('schedule',this)">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    スケジュール
-  </button>
+
   <button class="nav-btn" onclick="showPage('master',this)">
     <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     研修
@@ -290,10 +287,7 @@ body.admin .adm-block{display:flex}
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     受講者管理
   </button>
-  <button class="sidebar-btn" onclick="showPage('schedule',this)">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    スケジュール
-  </button>
+
   <button class="sidebar-btn" onclick="showPage('master',this)">
     <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     研修マスタ
@@ -311,7 +305,7 @@ body.admin .adm-block{display:flex}
   <div class="metric-grid" id="dash-metrics"><div class="metric"><div class="metric-lbl">読み込み中</div><div class="spinner"></div></div></div>
   <div class="two-col dash-grid">
     <div class="card"><div class="card-hdr">研修別完了率</div><div class="card-body" id="dash-prog"></div></div>
-    <div class="card"><div class="card-hdr">直近スケジュール</div><div class="card-body" id="dash-sch"></div></div>
+
   </div>
 </div>
 
@@ -335,13 +329,7 @@ body.admin .adm-block{display:flex}
   </table></div></div>
 </div>
 
-<div id="pg-schedule" class="page">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-    <span style="font-weight:700;font-size:13px">研修スケジュール</span>
-    <button class="btn-primary adm" style="font-size:12px;padding:6px 12px" onclick="openAddSchedule()" style="flex-shrink:0">+ 予定追加</button>
-  </div>
-  <div class="card card-body" id="sch-list"><div class="empty"><div class="spinner"></div></div></div>
-</div>
+
 
 <div id="pg-master" class="page">
   <div class="card"><div class="card-hdr">研修プログラム</div><div class="card-body" id="master-list"><div class="empty"><div class="spinner"></div></div></div></div>
@@ -385,20 +373,7 @@ body.admin .adm-block{display:flex}
   </div>
 </div>
 
-<div class="overlay" id="m-schedule">
-  <div class="modal-box">
-    <div class="modal-title">スケジュールを追加</div>
-    <div class="form-row"><label class="form-lbl">研修 *</label><select id="s-tr"></select></div>
-    <div class="form-row"><label class="form-lbl">開催日 *</label><input type="date" id="s-date"></div>
-    <div class="form-row"><label class="form-lbl">担当講師</label><input type="text" id="s-lec" placeholder="田中 マネージャー"></div>
-    <div class="form-row"><label class="form-lbl">場所</label><input type="text" id="s-loc" placeholder="研修室A"></div>
-    <div class="form-row"><label class="form-lbl">定員</label><input type="number" id="s-att" value="5" min="1"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeM('m-schedule')">キャンセル</button>
-      <button class="btn-primary" onclick="saveSchedule()">追加する</button>
-    </div>
-  </div>
-</div>
+
 
 <div class="overlay" id="m-detail">
   <div class="modal-box" style="width:540px" id="detail-inner"></div>
@@ -879,7 +854,7 @@ function loadData(force){
 // Navigation
 // ================================================================
 function showPage(name, btn){
-  var pages=['dashboard','trainees','schedule','master','interviewers'];
+  var pages=['dashboard','trainees','master','interviewers'];
   for(var i=0;i<pages.length;i++){
     var p=g('pg-'+pages[i]); if(p) p.className='page'+(pages[i]===name?' on':'');
   }
@@ -904,7 +879,6 @@ function showPage(name, btn){
   }
   if(name==='dashboard') renderDash();
   else if(name==='trainees') renderTrainees();
-  else if(name==='schedule') renderSchedule();
   else if(name==='master') renderMaster();
   else if(name==='interviewers') renderItvw();
 }
@@ -912,7 +886,6 @@ function showPage(name, btn){
 function renderAll(){
   renderDash();
   renderTrainees();
-  renderSchedule();
   renderMaster();
   renderItvw();
 }
@@ -1002,7 +975,7 @@ function openDetailFromMetric(id){
 // ================================================================
 function renderDash(){
   var tot=S.trainees.length;
-  var alertEl=g('dash-alert'), metricsEl=g('dash-metrics'), progEl=g('dash-prog'), schEl=g('dash-sch');
+  var alertEl=g('dash-alert'), metricsEl=g('dash-metrics'), progEl=g('dash-prog');
 
   if(!metricsEl) return;
 
@@ -1010,7 +983,6 @@ function renderDash(){
     metricsEl.innerHTML='<div class="metric"><div class="metric-lbl">受講者未登録</div><div class="metric-val">0</div></div>';
     if(alertEl) alertEl.innerHTML='';
     if(progEl) progEl.innerHTML='';
-    if(schEl) schEl.innerHTML='<div class="empty">予定なし</div>';
     return;
   }
 
@@ -1041,22 +1013,6 @@ function renderDash(){
     progEl.innerHTML=ph;
   }
 
-  if(schEl){
-    var upcoming=[];
-    for(var i=0;i<S.schedules.length;i++){ if(new Date(S.schedules[i].date)>=TODAY) upcoming.push(S.schedules[i]); }
-    upcoming.sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
-    upcoming=upcoming.slice(0,4);
-    if(upcoming.length===0){ schEl.innerHTML='<div class="empty">予定なし</div>'; }
-    else{
-      var sh='';
-      for(var i=0;i<upcoming.length;i++){
-        var s=upcoming[i], t=null;
-        for(var j=0;j<TRAININGS.length;j++){ if(TRAININGS[j].id==s.rid){ t=TRAININGS[j]; break; } }
-        var d=new Date(s.date);
-        sh+='<div class="sch-item"><div class="sch-date"><div class="sch-day">'+d.getDate()+'</div><div class="sch-mon">'+MOS[d.getMonth()]+'</div></div>'+
-          '<div style="flex:1"><div class="sch-nm">'+esc(t?t.name:'')+'</div><div class="sch-dt">'+esc(s.lec)+'｜'+esc(s.loc)+'</div></div>'+
-          '<span class="tag tag-g">'+s.att+'名</span></div>';
-      }
       schEl.innerHTML=sh;
     }
   }
@@ -1112,25 +1068,7 @@ function setFilter(f, btn){
   renderTrainees();
 }
 
-// ================================================================
-// Render Schedule
-// ================================================================
-function renderSchedule(){
-  var el=g('sch-list'); if(!el) return;
-  if(S.schedules.length===0){ el.innerHTML='<div class="empty">スケジュールはありません</div>'; return; }
-  var sorted=S.schedules.slice().sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
-  var h='';
-  for(var i=0;i<sorted.length;i++){
-    var s=sorted[i], t=null;
-    for(var j=0;j<TRAININGS.length;j++){ if(TRAININGS[j].id==s.rid){ t=TRAININGS[j]; break; } }
-    var d=new Date(s.date), past=d<TODAY;
-    h+='<div class="sch-item" style="'+(past?'opacity:.5':'')+'">'+
-      '<div class="sch-date"><div class="sch-day">'+d.getDate()+'</div><div class="sch-mon">'+MOS_JP[d.getMonth()]+'</div></div>'+
-      '<div style="flex:1"><div class="sch-nm">'+esc(t?t.name:'')+(past?' <span style="font-size:10px;color:#888">(実施済)</span>':'')+'</div><div class="sch-dt">'+esc(s.lec)+'　'+esc(s.loc)+'</div></div>'+
-      '<span class="tag tag-g">'+s.att+'名</span></div>';
-  }
-  el.innerHTML=h;
-}
+
 
 // ================================================================
 // Render Master
@@ -1671,26 +1609,6 @@ function saveTrainee(){
   }
 }
 
-function openAddSchedule(){
-  var sel=g('s-tr');
-  if(sel){ sel.innerHTML='<option value="">研修を選択</option>'; for(var i=0;i<TRAININGS.length;i++) sel.innerHTML+='<option value="'+TRAININGS[i].id+'">'+esc(TRAININGS[i].name)+'</option>'; }
-  var d=g('s-date'); if(d) d.value=new Date().toISOString().slice(0,10);
-  ['s-lec','s-loc'].forEach(function(f){ var e=g(f); if(e) e.value=''; });
-  var a=g('s-att'); if(a) a.value='5';
-  g('m-schedule').className='overlay on';
-}
-function saveSchedule(){
-  var rid=parseInt(g('s-tr')?g('s-tr').value:'');
-  var date=g('s-date')?g('s-date').value:'';
-  if(!rid||!date){ toast('研修と日付は必須です',true); return; }
-  var lec=(g('s-lec')?g('s-lec').value.trim():'')||'未定';
-  var loc=(g('s-loc')?g('s-loc').value.trim():'')||'研修室A';
-  var att=parseInt(g('s-att')?g('s-att').value:'0')||0;
-  var nid=S.schedules.length?Math.max.apply(null,S.schedules.map(function(s){ return s.id; }))+1:1;
-  S.schedules.push({id:nid,rid:rid,date:date,lec:lec,loc:loc,att:att});
-  closeM('m-schedule'); renderSchedule(); renderDash(); toast('スケジュールを追加しました');
-  if(GAS_URL) apiPost({action:'addSchedule',trainingId:rid,date:date,lecturer:lec,location:loc,attendees:att});
-}
 
 // ================================================================
 // Modal utils
