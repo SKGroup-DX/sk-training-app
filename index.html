@@ -828,6 +828,8 @@ function loadData(force){
   if(!GAS_URL){
     var b=g('gas-banner'); if(b) b.style.display='block';
     setSync('offline');
+    loadExtras();
+    renderAll();
     return;
   }
 
@@ -1011,10 +1013,6 @@ function renderDash(){
       ph+='<div class="pg-row"><div class="pg-lbl" title="'+esc(t.name)+'">'+esc(t.name)+'</div><div class="pg-bar"><div class="pg-fill" style="width:'+pct+'%"></div></div><div class="pg-pct">'+pct+'%</div></div>';
     }
     progEl.innerHTML=ph;
-  }
-
-      schEl.innerHTML=sh;
-    }
   }
 }
 
