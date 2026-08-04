@@ -607,7 +607,7 @@ function getDone(tr){
 function setSync(s){
   var el=g('sync-lbl');
   if(!el) return;
-  el.textContent = s==='ok'?'同期済み':s==='loading'?'同期中...':'オフライン（デモ）';
+  el.textContent = s==='ok'?'同期済み':s==='loading'?'同期中...':s==='pending'?'同期待ち':'オフライン（デモ）';
 }
 
 function toast(msg, err){
@@ -687,12 +687,44 @@ function deleteInterviewRecord(tid, recId){
 // ================================================================
 // API
 // ================================================================
+// タイムアウト付きfetch（ハング回避）
+function fetchWithTimeout(url, opts, ms){
+  if(typeof AbortController==='undefined') return fetch(url, opts);
+  var controller = new AbortController();
+  var opts2 = {}; for(var k in opts){ opts2[k]=opts[k]; } opts2.signal = controller.signal;
+  var timer = setTimeout(function(){ controller.abort(); }, ms||15000);
+  return fetch(url, opts2)
+    .then(function(r){ clearTimeout(timer); return r; })
+    .catch(function(err){ clearTimeout(timer); throw err; });
+}
+
+// 未送信の書き込みキュー（GAS通信失敗時の再送用）
+var PENDING_KEY = 'sk_pending';
+function getPendingQueue(){
+  try{ var q=JSON.parse(LS.get(PENDING_KEY,'[]')); return Array.isArray(q)?q:[]; }catch(e){ return []; }
+}
+function setPendingQueue(q){ LS.set(PENDING_KEY, JSON.stringify(q)); }
+function enqueuePending(body){
+  var q=getPendingQueue();
+  q.push({ts:Date.now(), body:body});
+  setPendingQueue(q);
+}
+
 function apiGet(){
   if(!GAS_URL) return Promise.reject(new Error('NO_GAS'));
-  return fetch(GAS_URL+'?action=getData&t='+Date.now(),{
+  return fetchWithTimeout(GAS_URL+'?action=getData&t='+Date.now(),{
     method:'GET', redirect:'follow', cache:'no-cache'
-  }).then(function(r){ return r.json(); });
+  }, 15000).then(function(r){ return r.json(); });
 }
+
+// Content-Typeを設定しないことでCORSプリフライトを回避
+function rawPost(body){
+  var encoded = 'data=' + encodeURIComponent(JSON.stringify(body));
+  return fetchWithTimeout(GAS_URL, { method:'POST', body:encoded, redirect:'follow' }, 15000)
+    .then(function(r){ return r.json(); })
+    .catch(function(err){ console.error('apiPost error:', err); return null; });
+}
+
 // 書き込み後の冷却期間中はポーリングをスキップ（ms）
 var _lastWrite = 0;
 var WRITE_COOLDOWN = 60000; // 60秒
@@ -701,19 +733,34 @@ function apiPost(body){
   if(!GAS_URL) return Promise.resolve(null);
   _lastWrite = Date.now();
   setSync('loading');
-  // Content-Typeを設定しないことでCORSプリフライトを回避
-  var encoded = 'data=' + encodeURIComponent(JSON.stringify(body));
-  return fetch(GAS_URL, {
-    method: 'POST',
-    body: encoded,
-    redirect: 'follow'
-  })
-    .then(function(r){ return r.json(); })
-    .catch(function(err){ console.error('apiPost error:', err); return null; })
-    .then(function(result){
+  return rawPost(body).then(function(result){
+    if(result){
       setSync('ok');
       return result;
+    }
+    // 失敗：ローカルの変更は失わず、キューに保存して後で再送する
+    enqueuePending(body);
+    setSync('pending');
+    return null;
+  });
+}
+
+// キュー内の未送信リクエストを順番に再送する。
+// 途中で失敗したら、それ以降は次回の呼び出しに温存する（順序を保つため）。
+function flushPendingQueue(){
+  if(!GAS_URL) return Promise.resolve();
+  var queue = getPendingQueue();
+  if(!queue.length) return Promise.resolve();
+  var i = 0;
+  function next(){
+    if(i >= queue.length){ setPendingQueue([]); return Promise.resolve(); }
+    return rawPost(queue[i].body).then(function(res){
+      if(res){ i++; return next(); }
+      setPendingQueue(queue.slice(i));
+      return Promise.resolve();
     });
+  }
+  return next();
 }
 
 function setGasUrl(url){
@@ -721,7 +768,9 @@ function setGasUrl(url){
   if(GAS_URL){ g('gas-banner').style.display='none'; loadData(true); }
 }
 
+var _dataLoaded = false; // 初回ロード後にtrue。未送信キューがある間の上書き防止に使う
 function applyData(data){
+  _dataLoaded = true;
   S.trainees  = data.trainees  || [];
   S.records   = (data.records||[]).map(function(r){ return {tid:r.traineeId||r.tid, rid:r.trainingId||r.rid, st:r.status||r.st, dt:r.doneDate||r.dt||''}; });
   S.schedules = (data.schedules||[]).map(function(s){ return {id:s.id, rid:s.trainingId||s.rid, date:s.date, lec:s.lecturer||s.lec||'', loc:s.location||s.loc||'', att:s.attendees||s.att||0}; });
@@ -741,28 +790,34 @@ function applyData(data){
   });
   var localItvws = [];
   try{ localItvws = JSON.parse(LS.get('sk_itvw','[]'))||[]; }catch(e){}
+  // 一度アップロードを試みた名前は二度と自動送信しない（GAS反映のタイムラグや
+  // 失敗時にポーリングごとの重複POSTが発生していたため）。失敗分はapiPostの
+  // 再送キュー（sk_pending）が別途カバーする。
+  var migrated = [];
+  try{ migrated = JSON.parse(LS.get('sk_itvw_migrated','[]'))||[]; }catch(e){}
+  function migrateOnce(lv){
+    if(!lv.name || !GAS_URL || migrated.indexOf(lv.name)!==-1) return;
+    migrated.push(lv.name);
+    LS.set('sk_itvw_migrated', JSON.stringify(migrated));
+    apiPost({action:'addInterviewer', name:lv.name, role:lv.role||'', note:lv.note||''});
+  }
   if(gasItvws.length > 0){
-    // GASにないlocalStorageの面談者をマイグレーション
+    // GASにないlocalStorageの面談者を一度だけ自動アップロード
     localItvws.forEach(function(lv){
       var found = false;
       for(var i=0;i<gasItvws.length;i++){
         if(gasItvws[i].name === lv.name){ found=true; break; }
       }
-      if(!found && lv.name && GAS_URL){
-        // GASに存在しない → 自動アップロード
-        apiPost({action:'addInterviewer', name:lv.name, role:lv.role||'', note:lv.note||''});
+      if(!found){
+        migrateOnce(lv);
         gasItvws.push({id:lv.id, name:lv.name, role:lv.role||'', note:lv.note||''});
       }
     });
     S.interviewers = gasItvws;
   } else if(localItvws.length > 0){
-    // GASに面談者なし → localStorageを使い、GASにアップロード
+    // GASに面談者なし → localStorageを使い、一度だけGASにアップロード
     S.interviewers = localItvws;
-    if(GAS_URL){
-      localItvws.forEach(function(lv){
-        if(lv.name) apiPost({action:'addInterviewer', name:lv.name, role:lv.role||'', note:lv.note||''});
-      });
-    }
+    localItvws.forEach(migrateOnce);
   }
   if(S.interviewers.length) LS.set('sk_itvw', JSON.stringify(S.interviewers));
   // 担当設定
@@ -823,7 +878,10 @@ function loadData(force){
       if(cached && cached !== ''){
         var c = JSON.parse(cached);
         if(c && c.data && Date.now()-c.ts < CACHE_TTL){
-          applyData(c.data); setSync('ok'); return;
+          // 未送信の変更がある間は、既存の画面状態をサーバー未反映のキャッシュで上書きしない
+          if(!(_dataLoaded && getPendingQueue().length>0)) applyData(c.data);
+          setSync(getPendingQueue().length===0 ? 'ok' : 'pending');
+          return;
         }
       }
     }catch(e){}
@@ -838,17 +896,25 @@ function loadData(force){
     return;
   }
 
-  apiGet().then(function(data){
-    if(data && !data.error){
-      LS.set(CACHE_KEY, JSON.stringify({ts:Date.now(), data:data}));
-      applyData(data);
-      setSync('ok');
-    }
+  flushPendingQueue().then(function(){
+    return apiGet().then(function(data){
+      if(data && !data.error){
+        LS.set(CACHE_KEY, JSON.stringify({ts:Date.now(), data:data}));
+        // まだ送信できていない変更が残っている場合、その内容が消えないよう
+        // サーバーからの取得結果での上書き（=画面反映）を見送る
+        if(!(_dataLoaded && getPendingQueue().length>0)){
+          applyData(data);
+          setSync('ok');
+        } else {
+          setSync('pending');
+        }
+      }
+    });
   }).catch(function(e){
     // GAS失敗：キャッシュがあればそれを使う、なければ現在のS状態を維持
     try{
       var cached2 = LS.get(CACHE_KEY, null);
-      if(cached2 && cached2 !== ''){
+      if(cached2 && cached2 !== '' && !(_dataLoaded && getPendingQueue().length>0)){
         var c2 = JSON.parse(cached2);
         if(c2 && c2.data){ applyData(c2.data); }
       }
@@ -1322,12 +1388,17 @@ function openEditItvw(id){
   g('itvw-del').style.display='block';
   g('m-itvw').className='overlay on';
 }
+var _lastItvwSubmit = 0;
 function saveItvw(){
   var name=g('itvw-nm')?g('itvw-nm').value.trim():'';
   if(!name){ toast('氏名は必須です',true); return; }
   var role=g('itvw-role')?g('itvw-role').value.trim():'';
   var note=g('itvw-note')?g('itvw-note').value.trim():'';
   var editId=parseInt(g('itvw-id')?g('itvw-id').value:'');
+  if(!editId){
+    if(Date.now() - _lastItvwSubmit < 1000) return; // 連打による二重登録を防止
+    _lastItvwSubmit = Date.now();
+  }
   if(editId){
     for(var i=0;i<S.interviewers.length;i++){ if(S.interviewers[i].id===editId){ S.interviewers[i].name=name; S.interviewers[i].role=role; S.interviewers[i].note=note; break; } }
   } else {
@@ -1577,10 +1648,13 @@ function openAddTrainee(){
   var d=g('f-join'); if(d) d.value=new Date().toISOString().slice(0,10);
   g('m-trainee').className='overlay on';
 }
+var _lastTraineeSubmit = 0;
 function saveTrainee(){
+  if(Date.now() - _lastTraineeSubmit < 1000) return; // 連打による二重登録を防止
   var name=g('f-name')?g('f-name').value.trim():'';
   var joinDate=g('f-join')?g('f-join').value:'';
   if(!name||!joinDate){ toast('氏名と入社日は必須です',true); return; }
+  _lastTraineeSubmit = Date.now();
   var dept=(g('f-dept')?g('f-dept').value.trim():'')||'ユニット2';
   var type=g('f-type')?g('f-type').value:'中途';
   var note=g('f-note')?g('f-note').value.trim():'';
@@ -1697,7 +1771,9 @@ function exitAdmin(){
 function init(){
   var inp=g('gas-url-input'); if(inp) inp.value=GAS_URL;
   loadData();
-  // 30秒ごとに自動更新（複数人同時編集対応）
+  // オンライン復帰時に未送信キューを再送
+  window.addEventListener('online', function(){ if(GAS_URL) loadData(true); });
+  // 30秒ごとに自動更新（複数人同時編集対応、未送信キューの再送も兼ねる）
   setInterval(function(){
     if(Date.now() - _lastWrite < WRITE_COOLDOWN) return; // 書き込み冷却中はスキップ
     if(GAS_URL){ loadData(true); }
