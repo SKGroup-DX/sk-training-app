@@ -1108,6 +1108,7 @@ function renderTrainees(){
     list.push(tr);
   }
   if(list.length===0){ tbody.innerHTML='<tr><td colspan="7" class="empty">該当する受講者はいません</td></tr>'; return; }
+  list.sort(function(a,b){ return (b.joinDate||'').localeCompare(a.joinDate||''); }); // 入社日が新しい順
 
   var h='';
   for(var i=0;i<list.length;i++){
