@@ -328,9 +328,10 @@ body.admin .adm-block{display:flex}
       <th class="col-pc">経過</th>
       <th style="text-align:center;width:56px">進捗</th>
       <th>状態</th>
+      <th class="col-pc">面談者</th>
       <th></th>
     </tr></thead>
-    <tbody id="trainee-tbody"><tr><td colspan="6" class="empty"><div class="spinner"></div></td></tr></tbody>
+    <tbody id="trainee-tbody"><tr><td colspan="7" class="empty"><div class="spinner"></div></td></tr></tbody>
   </table></div></div>
 </div>
 
@@ -1090,6 +1091,12 @@ function renderDash(){
 // ================================================================
 // Render Trainees
 // ================================================================
+function getItvwName(itvwId){
+  if(!itvwId) return '';
+  for(var i=0;i<S.interviewers.length;i++){ if(S.interviewers[i].id==itvwId) return S.interviewers[i].name; }
+  return '';
+}
+
 function renderTrainees(){
   var tbody=g('trainee-tbody'); if(!tbody) return;
   var list=[];
@@ -1100,7 +1107,7 @@ function renderTrainees(){
     if(S.filter==='done'&&st!=='done') continue;
     list.push(tr);
   }
-  if(list.length===0){ tbody.innerHTML='<tr><td colspan="6" class="empty">該当する受講者はいません</td></tr>'; return; }
+  if(list.length===0){ tbody.innerHTML='<tr><td colspan="7" class="empty">該当する受講者はいません</td></tr>'; return; }
 
   var h='';
   for(var i=0;i<list.length;i++){
@@ -1117,12 +1124,15 @@ function renderTrainees(){
       '<circle cx="22" cy="22" r="'+r+'" fill="none" stroke="'+sc+'" stroke-width="5" stroke-dasharray="'+arc.toFixed(1)+' '+(circ-arc).toFixed(1)+'" stroke-dashoffset="'+(circ*0.25).toFixed(1)+'" stroke-linecap="round"/>'+
       '<text x="22" y="20" text-anchor="middle" font-size="10" font-weight="600" fill="'+sc+'">'+doneN+'/17</text>'+
       '<text x="22" y="30" text-anchor="middle" font-size="9" fill="#888">'+pct+'%</text></svg>';
+    var itvwNm=getItvwName(tr.itvwId);
+    var itvwCell=itvwNm?esc(itvwNm):'<span style="color:#ccc">未設定</span>';
     h+='<tr>'+
       '<td style="padding-left:12px"><div class="nm">'+esc(tr.name)+'</div><div class="nm-sub">'+esc(tr.dept)+'｜'+esc(tr.type)+'</div></td>'+
       '<td class="col-pc" style="font-size:11px;color:#888;white-space:nowrap">'+esc(tr.joinDate)+'</td>'+
       '<td class="col-pc" style="font-size:11px;color:#888;white-space:nowrap">'+days+'日</td>'+
       '<td style="text-align:center">'+donut+'</td>'+
       '<td>'+badge+'</td>'+
+      '<td class="col-pc" style="font-size:11px;color:#555;white-space:nowrap">'+itvwCell+'</td>'+
       '<td><button class="btn-icon" onclick="openDetail('+tr.id+')">詳細</button></td>'+
       '</tr>';
   }
