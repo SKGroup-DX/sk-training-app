@@ -126,9 +126,6 @@ body{background:#f1f3f5;color:#1a1a1a;font-size:14px;position:relative}
 .tr-sub-nm{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(min-width:769px){.tr-nm{font-size:14px}.tr-btns{flex-wrap:nowrap!important}}
 .tr-btns{display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
-.tr-preview{display:none;border-top:1px solid #e0e0e0}
-.tr-preview.on{display:block}
-.tr-preview iframe{width:100%;height:480px;border:none;display:block}
 .tr-content-panel{display:none;border-top:1px solid #e0e0e0;background:#fff;padding:12px}
 .tr-content-panel.on{display:block}
 .tr-content-ta{width:100%;min-height:120px;font-size:12px;line-height:1.7;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;resize:vertical;font-family:inherit;color:#1a1a1a;background:#f8f9fa}
@@ -206,8 +203,6 @@ textarea{resize:vertical;min-height:60px}
 .gas-info{background:#fdf6e3;border:1px solid #c9a227;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#7a5c00}
 .gas-info input{margin-top:6px;font-family:monospace;font-size:11px}
 .yt-block{background:#f8f9fa;border-radius:8px;margin-bottom:8px;overflow:hidden;border:1px solid #e0e0e0}
-.yt-preview{display:none}
-.yt-preview.on{display:block}
 .note-lbl{font-size:11px;color:#888;display:block;margin-bottom:3px;margin-top:10px}
 /* ── Admin PIN ── */
 .pin-overlay{display:none;position:absolute;top:0;left:0;width:100%;min-height:100%;background:rgba(0,0,0,.72);z-index:9999;align-items:flex-start;justify-content:center;padding-top:60px}
@@ -426,6 +421,28 @@ body.admin .adm-block{display:flex}
       <button class="btn-danger" onclick="deleteYt()">URL削除</button>
       <button class="btn-primary" onclick="saveYt()">保存する</button>
     </div>
+  </div>
+</div>
+
+<!-- 動画・資料の再生専用モーダル（自動更新でmaster-listが再描画されても
+     この中身は影響を受けないため、再生が途中で止まらない） -->
+<div class="overlay" id="m-ytwatch">
+  <div class="modal-box" style="width:640px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="modal-title" style="margin-bottom:0">3人のレンガ職人</div>
+      <button class="btn-cancel" style="padding:4px 12px;font-size:12px" onclick="closeYtPlay()">閉じる</button>
+    </div>
+    <div id="yt-play-area"></div>
+  </div>
+</div>
+
+<div class="overlay" id="m-matwatch">
+  <div class="modal-box" style="width:640px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="modal-title" id="matwatch-title" style="margin-bottom:0"></div>
+      <button class="btn-cancel" style="padding:4px 12px;font-size:12px" onclick="closeMatPlay()">閉じる</button>
+    </div>
+    <div id="mat-play-area"></div>
   </div>
 </div>
 
@@ -1153,8 +1170,6 @@ function setFilter(f, btn){
 // ================================================================
 // Render Master
 // ================================================================
-var openPrevId=null, ytOpen=false;
-
 function ytIdFrom(url){
   if(!url) return '';
   var m=url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
@@ -1166,28 +1181,29 @@ function renderMaster(){
   var tot=S.trainees.length;
   var ytId=ytIdFrom(S.ytUrl);
 
-  var ytBtn=ytId?'<button class="btn-sm green" onclick="toggleYt()">&#9654; 動画を見る</button>':'<button class="btn-sm gray">動画未設定</button>';
+  var ytBtn=ytId?'<button class="btn-sm green" onclick="openYtPlay()">&#9654; 動画を見る</button>':'<button class="btn-sm gray">動画未設定</button>';
   var ytReg='<button class="btn-sm adm" onclick="openYtM()">&#9881; '+(ytId?'URL変更':'URL登録')+'</button>';
-  // iframeはボタン押下時に動的生成するため、ここでは挿入しない
+  // 動画は別モーダル（m-ytwatch）で再生する。自動更新でこのmaster-list全体が
+  // 再描画されても再生モーダルは影響を受けないため、途中で止まらない。
 
   var h='<div class="yt-block">'+
     '<div class="tr-row">'+
     '<div class="tr-num" style="background:#dc2626;flex-shrink:0">&#9654;</div>'+
     '<div class="tr-body"><div class="tr-nm">3人のレンガ職人</div><div class="tr-sub-nm">導入編 参考動画（約5分）</div></div>'+
     '<div style="display:flex;gap:5px;flex-shrink:0;align-items:center">'+ytBtn+ytReg+'</div></div>'+
-    '<div class="yt-preview" id="yt-preview"></div></div>';
+    '</div>';
 
   for(var i=0;i<TRAININGS.length;i++){
     var t=TRAININGS[i], n=0;
     for(var j=0;j<S.trainees.length;j++){ if(getRecSt(S.trainees[j].id,t.id)==='done') n++; }
     var pct=tot?Math.round(n/tot*100):0;
     var hasUrl=!!t.materialUrl;
-    var matBtn=hasUrl?'<button class="btn-sm green" onclick="togglePrev('+t.id+',event)">&#9654; 資料</button>':'<button class="btn-sm gray">資料なし</button>';
+    var matBtn=hasUrl?'<button class="btn-sm green" onclick="openMatPlay('+t.id+',event)">&#9654; 資料</button>':'<button class="btn-sm gray">資料なし</button>';
     var regBtn='<button class="btn-sm adm" onclick="openMatM('+t.id+',event)">&#9881; '+(hasUrl?'URL変更':'URL登録')+'</button>';
     var deadLbl='<span style="font-size:10px;color:#888;white-space:nowrap">入社後'+t.deadline+'日以内</span>';
     var deadBtn='<button class="btn-sm adm" onclick="openDeadM('+t.id+',event)" style="font-size:10px;padding:3px 7px">&#9998; 期限変更</button>';
     var contentTxt=TRAINING_TEXTS[t.id]||'';
-    var matRowBtn=hasUrl?'<button class="btn-sm green" onclick="togglePrev('+t.id+',event)">&#9654; 資料</button>':'';
+    var matRowBtn=hasUrl?'<button class="btn-sm green" onclick="openMatPlay('+t.id+',event)">&#9654; 資料</button>':'';
     h+='<div class="tr-item" id="tri-'+t.id+'">'+
       '<div class="tr-row">'+
         '<div class="tr-num" style="flex-shrink:0">'+t.id+'</div>'+
@@ -1218,25 +1234,23 @@ function renderMaster(){
           '<button class="btn-save-txt" onclick="saveContentText('+t.id+')">&#10003; 保存</button>'+
         '</div>'+
       '</div>'+
-      '<div class="tr-preview" id="trp-'+t.id+'"><div style="padding:8px;color:#888;font-size:12px">読み込み中...</div></div>'+
       '</div>';
   }
   el.innerHTML=h;
 }
 
-function toggleYt(){
-  var p=g('yt-preview'); if(!p) return;
-  ytOpen=!ytOpen;
-  if(ytOpen){
-    var ytId=ytIdFrom(S.ytUrl);
-    if(ytId){
-      p.innerHTML='<div style="position:relative;padding-bottom:56.25%;height:0"><iframe src="https://www.youtube.com/embed/'+ytId+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen></iframe></div>';
-    }
-    p.className='yt-preview on';
-  } else {
-    p.innerHTML='';
-    p.className='yt-preview';
-  }
+// 動画は自動更新の影響を受けない専用モーダルで再生する（renderMaster()が
+// master-list全体を再描画しても、このモーダルの中身には触れないため、
+// 30秒ごとの自動更新で再生が止まったり画面が閉じたりしない）
+function openYtPlay(){
+  var ytId=ytIdFrom(S.ytUrl);
+  if(!ytId) return;
+  g('yt-play-area').innerHTML='<div style="position:relative;padding-bottom:56.25%;height:0"><iframe src="https://www.youtube.com/embed/'+ytId+'?autoplay=1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen allow="autoplay"></iframe></div>';
+  g('m-ytwatch').className='overlay on';
+}
+function closeYtPlay(){
+  g('m-ytwatch').className='overlay';
+  g('yt-play-area').innerHTML=''; // iframeを破棄して再生を止める
 }
 function openYtM(){
   var e=g('yt-url'); if(e) e.value=S.ytUrl||'';
@@ -1245,12 +1259,12 @@ function openYtM(){
 function saveYt(){
   var url=g('yt-url')?g('yt-url').value.trim():'';
   S.ytUrl=url; LS.set('sk_yt',url);
-  closeM('m-yt'); ytOpen=false; renderMaster(); toast('動画URLを保存しました');
+  closeM('m-yt'); renderMaster(); toast('動画URLを保存しました');
   if(GAS_URL) apiPost({action:'updateYoutubeUrl', url:url});
 }
 function deleteYt(){
   S.ytUrl=''; LS.set('sk_yt','');
-  closeM('m-yt'); ytOpen=false; renderMaster(); toast('URLを削除しました');
+  closeM('m-yt'); closeYtPlay(); renderMaster(); toast('URLを削除しました');
   if(GAS_URL) apiPost({action:'updateYoutubeUrl', url:''});
 }
 
@@ -1259,23 +1273,19 @@ function toDrivePrev(url){
   var m=url.match(/\/d\/([a-zA-Z0-9_-]{20,})/);
   return m?'https://drive.google.com/file/d/'+m[1]+'/preview':url;
 }
-function togglePrev(id, e){
+// 資料プレビューも動画と同様に専用モーダルで表示する（自動更新でmaster-listが
+// 再描画されても閉じたり止まったりしない）
+function openMatPlay(id, e){
   if(e) e.stopPropagation();
   var t=null; for(var i=0;i<TRAININGS.length;i++){ if(TRAININGS[i].id===id){ t=TRAININGS[i]; break; } }
   if(!t||!t.materialUrl) return;
-  var p=g('trp-'+id), item=g('tri-'+id);
-  var isOpen=p&&p.classList.contains('on');
-  if(openPrevId&&openPrevId!==id){
-    var pp=g('trp-'+openPrevId), pi=g('tri-'+openPrevId);
-    if(pp) pp.className='tr-preview';
-    if(pi) pi.className='tr-item';
-  }
-  if(isOpen){ if(p) p.className='tr-preview'; if(item) item.className='tr-item'; openPrevId=null; }
-  else{
-    if(p){ p.innerHTML='<iframe src="'+toDrivePrev(t.materialUrl)+'" style="width:100%;height:480px;border:none;display:block" allowfullscreen></iframe>'; p.className='tr-preview on'; }
-    if(item) item.className='tr-item open';
-    openPrevId=id;
-  }
+  g('matwatch-title').textContent=t.id+'. '+t.name;
+  g('mat-play-area').innerHTML='<iframe src="'+toDrivePrev(t.materialUrl)+'" style="width:100%;height:480px;border:none;display:block" allowfullscreen></iframe>';
+  g('m-matwatch').className='overlay on';
+}
+function closeMatPlay(){
+  g('m-matwatch').className='overlay';
+  g('mat-play-area').innerHTML='';
 }
 function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
@@ -1704,7 +1714,12 @@ function saveTrainee(){
 function closeM(id){ var m=g(id); if(m) m.className='overlay'; }
 
 document.addEventListener('click', function(e){
-  if(e.target && e.target.classList && e.target.classList.contains('overlay')) e.target.className='overlay';
+  if(e.target && e.target.classList && e.target.classList.contains('overlay')){
+    // 動画・資料の再生モーダルは背景クリックで閉じる際も再生を止める
+    if(e.target.id==='m-ytwatch'){ closeYtPlay(); return; }
+    if(e.target.id==='m-matwatch'){ closeMatPlay(); return; }
+    e.target.className='overlay';
+  }
 });
 
 // ================================================================
