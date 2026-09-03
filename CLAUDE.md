@@ -6,7 +6,7 @@
 
 中途採用者向け研修管理アプリ。17週間の週次プログラム(index.htmlのTRAININGS配列、id 1〜17)の進捗管理、面談担当者の割り当てを行う。各週は自己紹介・挨拶・身だしなみ・清掃・企業理念経営方針・クレドカード・振り返りの7つの大テーマに整理されている。
 
-URL: https://kasuyakouta.github.io/sk-training-app/
+URL: https://skgroup-dx.github.io/sk-training-app/
 
 
 
